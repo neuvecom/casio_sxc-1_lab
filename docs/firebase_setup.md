@@ -89,14 +89,18 @@ firebase deploy --only firestore:rules
 ## 8. 管理者権限の付与（プリセット登録用）
 
 プリセットの登録・編集は管理者（Custom Claims `admin: true`）のみ可能です。
-運営アカウントの UID に対し、Admin SDK で一度だけ付与します（例: ローカルの Node スクリプト）。
+運営アカウントの UID に、付属スクリプト `scripts/setAdmin.mjs` で一度だけ付与します。
 
-```js
-// サービスアカウント鍵が必要（コンソール > プロジェクト設定 > サービスアカウント）
-const admin = require('firebase-admin')
-admin.initializeApp({ credential: admin.credential.cert(require('./serviceAccountKey.json')) })
-admin.auth().setCustomUserClaims('<管理者のUID>', { admin: true })
-  .then(() => console.log('done'))
+1. Firebase コンソール > プロジェクトの設定 > サービスアカウント で
+   「新しい秘密鍵の生成」→ JSON をダウンロード
+2. リポジトリ直下に `serviceAccountKey.json` として配置（※`.gitignore` 済・コミット禁止）
+3. 対象 UID（コンソール > Authentication > Users で確認）を引数に実行:
+
+```bash
+node scripts/setAdmin.mjs <管理者のUID>
 ```
+
+4. 付与後、対象ユーザーは**一度ログアウト→再ログイン**するとトークンが更新され、
+   画面に「管理」メニューと `/admin` ページが現れる。
 
 > サービスアカウント鍵は機密情報です。リポジトリに**絶対にコミットしない**でください。

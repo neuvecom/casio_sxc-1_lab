@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext.jsx'
 
 export default function Layout({ children }) {
-  const { user, signOut } = useAuth()
+  const { user, isAdmin, signOut } = useAuth()
   const navigate = useNavigate()
 
   const handleSignOut = async () => {
@@ -32,6 +32,11 @@ export default function Layout({ children }) {
                 <NavLink to="/banks" className={navClass}>
                   バンク
                 </NavLink>
+                {isAdmin && (
+                  <NavLink to="/admin" className={navClass}>
+                    管理
+                  </NavLink>
+                )}
                 <button
                   onClick={handleSignOut}
                   className="ml-2 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-800"

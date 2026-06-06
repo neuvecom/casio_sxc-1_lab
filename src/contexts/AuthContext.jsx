@@ -15,6 +15,7 @@ const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,8 +23,19 @@ export function AuthProvider({ children }) {
       setLoading(false)
       return
     }
-    const unsub = onAuthStateChanged(auth, (u) => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u)
+      if (u) {
+        // Custom Claims (admin: true) で管理者を判定
+        try {
+          const token = await u.getIdTokenResult()
+          setIsAdmin(token.claims.admin === true)
+        } catch {
+          setIsAdmin(false)
+        }
+      } else {
+        setIsAdmin(false)
+      }
       setLoading(false)
     })
     return unsub
@@ -54,6 +66,7 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    isAdmin,
     loading,
     isFirebaseConfigured,
     loginWithGoogle,
