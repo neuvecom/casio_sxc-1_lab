@@ -24,6 +24,7 @@ npm run build          # 本番ビルド
 
 `.env` には Firebase コンソールで取得した設定（`VITE_FIREBASE_*`）を記入します。
 未設定でもアプリは起動しますが、認証は無効になります。
+詳しい接続手順は `docs/firebase_setup.md` を参照してください。
 
 ## ドキュメント
 

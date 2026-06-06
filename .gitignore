@@ -17,3 +17,10 @@ yarn-error.log*
 .DS_Store
 .vscode/
 .idea/
+
+# firebase
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+serviceAccountKey.json
+*serviceAccount*.json
