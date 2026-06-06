@@ -32,12 +32,25 @@ export function subscribeSlots(uid, onChange, onError) {
   )
 }
 
-// スロットの種別を保存。empty なら削除。
-export async function setSlotType(uid, bank, pad, type) {
+// スロットの内容を保存。type が 'empty' なら削除。
+// data: { type, presetId, sampleName, memo }
+export async function setSlot(uid, bank, pad, data) {
   const ref = doc(db, 'users', uid, 'slots', slotId(bank, pad))
-  if (type === 'empty') {
+  if (!data.type || data.type === 'empty') {
     await deleteDoc(ref)
-  } else {
-    await setDoc(ref, { bank, pad, type, updatedAt: serverTimestamp() }, { merge: true })
+    return
   }
+  await setDoc(
+    ref,
+    {
+      bank,
+      pad,
+      type: data.type,
+      presetId: data.type === 'preset' ? data.presetId || null : null,
+      sampleName: data.type === 'sample' ? data.sampleName || '' : '',
+      memo: data.memo || '',
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  )
 }

@@ -1,12 +1,13 @@
 // 1280スロット（80バンク × 16パッド）の空き状況ビジュアライズ。
-// Firestore（users/{uid}/slots）と接続し、変更は自分のアカウントに保存・復元される。
+// Firestore（users/{uid}/slots）と接続し、パッドをクリックするとモーダルで
+// プリセット割当・サンプル名・メモを編集できる。
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { BANK_COUNT, PAD_COUNT, SLOT_COUNT, slotId } from '../lib/banks.js'
-import { subscribeSlots, setSlotType } from '../lib/slots.js'
+import { subscribeSlots, setSlot } from '../lib/slots.js'
+import { subscribePresets } from '../lib/presets.js'
+import SlotModal from '../components/SlotModal.jsx'
 
-// スロット種別。クリックで empty → preset → sample → empty と循環。
-const TYPES = ['empty', 'preset', 'sample']
 const TYPE_STYLE = {
   empty: 'bg-slate-800 hover:bg-slate-700',
   preset: 'bg-emerald-600 hover:bg-emerald-500',
@@ -16,12 +17,13 @@ const TYPE_LABEL = { empty: '空き', preset: 'プリセット', sample: 'サン
 
 export default function BankGrid() {
   const { user } = useAuth()
-  // slotId -> data（{ type, bank, pad, ... }）。未登録は 'empty' 扱い。
-  const [slots, setSlots] = useState({})
+  const [slots, setSlots] = useState({}) // slotId -> data
+  const [presets, setPresets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [editing, setEditing] = useState(null) // { bank, pad } | null
 
-  // Firestore の変更を購読して反映
+  // 自分のスロットを購読
   useEffect(() => {
     if (!user) return
     setLoading(true)
@@ -39,28 +41,51 @@ export default function BankGrid() {
     return unsub
   }, [user])
 
-  const cycle = (bank, pad) => {
-    const id = slotId(bank, pad)
-    const cur = slots[id]?.type || 'empty'
-    const next = TYPES[(TYPES.indexOf(cur) + 1) % TYPES.length]
-
-    // 楽観的更新（保存完了は onSnapshot が後追いで反映）
-    setSlots((prev) => {
-      const n = { ...prev }
-      if (next === 'empty') delete n[id]
-      else n[id] = { ...(n[id] || {}), type: next, bank, pad }
-      return n
-    })
-
-    setSlotType(user.uid, bank, pad, next).catch((e) =>
-      setError(`保存に失敗しました：${e.message}`),
+  // プリセット一覧を購読（割当の選択肢・名前表示用）
+  useEffect(() => {
+    const unsub = subscribePresets(setPresets, (e) =>
+      setError(`プリセットの読み込みに失敗：${e.message}`),
     )
-  }
+    return unsub
+  }, [])
+
+  const presetsById = useMemo(
+    () => Object.fromEntries(presets.map((p) => [p.id, p])),
+    [presets],
+  )
 
   const filled = useMemo(
     () => Object.values(slots).filter((s) => s?.type && s.type !== 'empty').length,
     [slots],
   )
+
+  // スロットに表示するラベル（ツールチップ用）
+  const slotLabel = (bank, pad, s) => {
+    const head = `Bank ${bank} - Pad ${pad}`
+    if (!s || !s.type || s.type === 'empty') return `${head}：空き`
+    if (s.type === 'preset') {
+      const name = presetsById[s.presetId]?.name || '(不明なプリセット)'
+      return `${head}：${name}`
+    }
+    return `${head}：${s.sampleName || 'サンプル'}`
+  }
+
+  const handleSave = async (data) => {
+    const { bank, pad } = editing
+    const id = slotId(bank, pad)
+    // 楽観的更新
+    setSlots((prev) => {
+      const n = { ...prev }
+      if (!data.type || data.type === 'empty') delete n[id]
+      else n[id] = { bank, pad, ...data }
+      return n
+    })
+    try {
+      await setSlot(user.uid, bank, pad, data)
+    } catch (e) {
+      setError(`保存に失敗しました：${e.message}`)
+    }
+  }
 
   return (
     <div>
@@ -68,7 +93,7 @@ export default function BankGrid() {
         <div>
           <h1 className="text-xl font-bold">バンク空き状況</h1>
           <p className="mt-1 text-sm text-slate-400">
-            パッドをクリックすると種別が切り替わり、自動保存されます
+            パッドをクリックして、プリセットやサンプルを割り当てます
           </p>
         </div>
         <div className="text-sm text-slate-300">
@@ -85,7 +110,7 @@ export default function BankGrid() {
 
       {/* 凡例 */}
       <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-400">
-        {TYPES.map((t) => (
+        {Object.keys(TYPE_LABEL).map((t) => (
           <span key={t} className="flex items-center gap-1.5">
             <span className={`inline-block h-3 w-3 rounded-sm ${TYPE_STYLE[t].split(' ')[0]}`} />
             {TYPE_LABEL[t]}
@@ -96,7 +121,6 @@ export default function BankGrid() {
       {loading ? (
         <div className="mt-6 text-slate-400">読み込み中…</div>
       ) : (
-        // 80バンク × 16パッド
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
           {Array.from({ length: BANK_COUNT }, (_, b) => {
             const bank = b + 1
@@ -107,12 +131,13 @@ export default function BankGrid() {
                   {Array.from({ length: PAD_COUNT }, (_, p) => {
                     const pad = p + 1
                     const id = slotId(bank, pad)
-                    const type = slots[id]?.type || 'empty'
+                    const s = slots[id]
+                    const type = s?.type || 'empty'
                     return (
                       <button
                         key={id}
-                        onClick={() => cycle(bank, pad)}
-                        title={`Bank ${bank} - Pad ${pad}：${TYPE_LABEL[type]}`}
+                        onClick={() => setEditing({ bank, pad })}
+                        title={slotLabel(bank, pad, s)}
                         className={`aspect-square rounded-sm ${TYPE_STYLE[type]}`}
                       />
                     )
@@ -122,6 +147,17 @@ export default function BankGrid() {
             )
           })}
         </div>
+      )}
+
+      {editing && (
+        <SlotModal
+          bank={editing.bank}
+          pad={editing.pad}
+          initial={slots[slotId(editing.bank, editing.pad)]}
+          presets={presets}
+          onSave={handleSave}
+          onClose={() => setEditing(null)}
+        />
       )}
     </div>
   )
