@@ -58,14 +58,33 @@ npm run dev
 
 ## 7. セキュリティルールの反映（任意・推奨）
 
-Firebase CLI を使うとリポジトリの `firestore.rules` をそのまま適用できます。
+方法はいくつかあります。手軽な順に:
+
+### 方法A: コンソールに貼り付け（CLI 不要・最も簡単）
+
+1. Firebase コンソール →「Firestore Database」→「ルール」タブ
+2. リポジトリの `firestore.rules` の中身を貼り付け →「公開」
+
+### 方法B: npx（グローバルインストール不要）
 
 ```bash
-npm install -g firebase-tools   # 未インストールの場合
+npx firebase-tools login
+npx firebase-tools use --add
+npx firebase-tools deploy --only firestore:rules
+```
+
+### 方法C: Homebrew で CLI を導入（macOS）
+
+```bash
+brew install firebase-cli
 firebase login
-firebase use --add              # 対象プロジェクトを選択（.firebaserc が作られる）
+firebase use --add              # .firebaserc が作られる
 firebase deploy --only firestore:rules
 ```
+
+> 注意: `npm install -g firebase-tools` は macOS（Homebrew）だと
+> `/usr/local/lib` の権限で EACCES になりがちです。`sudo` は使わず、
+> 上記 A〜C のいずれかを推奨します。
 
 ## 8. 管理者権限の付与（プリセット登録用）
 
