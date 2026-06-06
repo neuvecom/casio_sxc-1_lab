@@ -34,7 +34,6 @@ defaultBank: number|null  # 工場出荷時の既定バンク ※未確認
 defaultPad: number|null   # 工場出荷時の既定パッド ※未確認
 description: string
 tags: string[]
-audioSampleUrl: string|null  # （任意）試聴用サンプル（Firebase Storage）※要検討
 ratingAvg: number       # 集計値（Cloud Functions 更新）
 ratingCount: number     # 集計値
 favoriteCount: number   # 集計値（ランキングの主指標）
@@ -82,7 +81,6 @@ updatedAt: timestamp
 
 ## 未確定・要検討事項
 
-- 試聴用音声サンプルを持つか（Storage 容量・権利関係）※要検討
 - 工場プリセットの既定配置が機体間で共通か（defaultBank/Pad の信頼性）※未確認
 - 未ログインユーザーへの公開範囲（ランキングのみ等）※要検討
 - スロット上書き履歴の要否 ※要検討
