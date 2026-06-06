@@ -32,6 +32,9 @@ export default function Layout({ children }) {
                 <NavLink to="/banks" className={navClass}>
                   バンク
                 </NavLink>
+                <NavLink to="/presets" className={navClass}>
+                  プリセット
+                </NavLink>
                 {isAdmin && (
                   <NavLink to="/admin" className={navClass}>
                     管理

@@ -6,6 +6,7 @@ import AdminRoute from './components/AdminRoute.jsx'
 import Login from './pages/Login.jsx'
 import MyPage from './pages/MyPage.jsx'
 import BankGrid from './pages/BankGrid.jsx'
+import Presets from './pages/Presets.jsx'
 import Admin from './pages/Admin.jsx'
 
 export default function App() {
@@ -28,6 +29,16 @@ export default function App() {
           <ProtectedRoute>
             <Layout>
               <BankGrid />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/presets"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Presets />
             </Layout>
           </ProtectedRoute>
         }
