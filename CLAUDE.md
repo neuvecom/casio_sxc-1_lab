@@ -46,11 +46,9 @@ SXC-1（2026年発売のポータブル・スタンドアロン・サンプラ�
   - 他ユーザーのメモ・使い方の閲覧
   - 人気プリセットランキング（★平均・お気に入り数の集計）
 
-## 技術スタック（提案・未確定）
+## 技術スタック（確定）
 
-ユーザーと未確定。現時点の推奨案（決定後に本節を更新する）:
-
-- フロントエンド: Next.js (React) または Vite + React
+- フロントエンド: Vite + React
 - スタイリング: Tailwind CSS
 - バックエンド／認証: Firebase（Authentication + Cloud Firestore）
 - 音声処理: Web Audio API（必要に応じ TensorFlow.js / Essentia.js）
@@ -62,7 +60,7 @@ docs/
   requirements.md   # 要件定義
   db_schema.md      # Firestore 設計（共通/個別データの分離）
   reference/        # 公式マニュアル PDF・仕様の一次情報
-src/                # アプリ本体（スタック確定後）
+src/                # アプリ本体（Vite + React）
 ```
 
 ## Claude Code 使用時の重要な指示
