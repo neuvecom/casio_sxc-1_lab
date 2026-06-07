@@ -2,7 +2,7 @@
 // 管理者が登録したプリセットを閲覧し、お気に入り・★評価・メモを記録できる。
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
-import { subscribePresets } from '../lib/presets.js'
+import { subscribePresets, colorHex } from '../lib/presets.js'
 import { subscribeUserPresetMeta, setUserPresetMeta } from '../lib/userPresetMeta.js'
 
 // クリックできる★評価（1〜5、同じ星をもう一度押すと解除）
@@ -126,18 +126,19 @@ export default function Presets() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-2 font-semibold">
-                      {p.color && (
+                      {colorHex(p.color) && (
                         <span
                           className="inline-block h-3 w-3 shrink-0 rounded-full border border-slate-600"
-                          style={{ backgroundColor: p.color }}
+                          style={{ backgroundColor: colorHex(p.color) }}
+                          title={p.color}
                         />
                       )}
                       {p.name}
                     </div>
                     <div className="mt-0.5 flex flex-wrap gap-2 text-xs text-slate-400">
                       <span className="rounded bg-slate-800 px-1.5 py-0.5">{p.category}</span>
-                      {p.group && (
-                        <span className="rounded bg-slate-800 px-1.5 py-0.5">{p.group}</span>
+                      {p.group != null && (
+                        <span className="rounded bg-slate-800 px-1.5 py-0.5">G{p.group}</span>
                       )}
                       {p.origin && p.origin !== 'unknown' && (
                         <span className="rounded bg-slate-800 px-1.5 py-0.5">{p.origin}</span>

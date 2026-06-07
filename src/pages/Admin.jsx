@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import {
   CATEGORIES,
   ORIGINS,
+  GROUPS,
+  COLORS,
+  colorHex,
   subscribePresets,
   addPreset,
   updatePreset,
@@ -147,33 +150,40 @@ export default function Admin() {
             </select>
           </label>
           <label className="text-sm">
-            グループ
-            <input
-              className={inputClass}
-              value={form.group}
-              onChange={update('group')}
-              placeholder="例：ドラム / ベース / FX"
-            />
+            グループ（1〜16）
+            <select className={inputClass} value={form.group} onChange={update('group')}>
+              <option value="">（未設定）</option>
+              {GROUPS.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
           </label>
           <div className="text-sm">
             色
-            <div className="mt-1 flex items-center gap-2">
-              <input
-                type="color"
-                value={form.color || '#10b981'}
-                onChange={update('color')}
-                className="h-9 w-12 cursor-pointer rounded border border-slate-700 bg-slate-900"
-              />
-              <span className="text-xs text-slate-400">{form.color || 'なし'}</span>
-              {form.color && (
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {COLORS.map((c) => (
                 <button
+                  key={c.name}
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, color: '' }))}
-                  className="text-xs text-slate-400 underline hover:text-slate-200"
-                >
-                  クリア
-                </button>
-              )}
+                  onClick={() => setForm((f) => ({ ...f, color: c.name }))}
+                  title={c.name}
+                  className={`h-7 w-7 rounded-full border-2 ${
+                    form.color === c.name ? 'border-white' : 'border-slate-600'
+                  }`}
+                  style={{ backgroundColor: c.hex }}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, color: '' }))}
+                className={`h-7 rounded-full border px-2 text-xs ${
+                  form.color === ''
+                    ? 'border-white text-white'
+                    : 'border-slate-600 text-slate-400'
+                }`}
+              >
+                なし
+              </button>
             </div>
           </div>
           <div className="flex items-end gap-4 text-sm">
@@ -260,10 +270,11 @@ export default function Admin() {
                   <tr key={p.id} className="border-t border-slate-800">
                     <td className="px-3 py-2 font-medium">
                       <span className="flex items-center gap-2">
-                        {p.color && (
+                        {colorHex(p.color) && (
                           <span
                             className="inline-block h-3 w-3 shrink-0 rounded-full border border-slate-600"
-                            style={{ backgroundColor: p.color }}
+                            style={{ backgroundColor: colorHex(p.color) }}
+                            title={p.color}
                           />
                         )}
                         {p.name}
