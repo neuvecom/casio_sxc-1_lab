@@ -19,6 +19,7 @@ const EMPTY_FORM = {
   origin: 'unknown',
   group: '',
   color: '',
+  isPreset: true,
   oneShot: false,
   loop: false,
   defaultBank: '',
@@ -82,8 +83,9 @@ export default function Admin() {
       name: p.name || '',
       category: p.category || 'Other',
       origin: p.origin || 'unknown',
-      group: p.group || '',
+      group: p.group ?? '',
       color: p.color || '',
+      isPreset: p.isPreset !== false,
       oneShot: !!p.oneShot,
       loop: !!p.loop,
       defaultBank: p.defaultBank ?? '',
@@ -188,6 +190,10 @@ export default function Admin() {
           </div>
           <div className="flex items-end gap-4 text-sm">
             <label className="flex items-center gap-2">
+              <input type="checkbox" checked={form.isPreset} onChange={updateCheck('isPreset')} />
+              プリセット
+            </label>
+            <label className="flex items-center gap-2">
               <input type="checkbox" checked={form.oneShot} onChange={updateCheck('oneShot')} />
               ワンショット
             </label>
@@ -284,7 +290,11 @@ export default function Admin() {
                     <td className="px-3 py-2 text-slate-300">{p.group || '—'}</td>
                     <td className="px-3 py-2 text-slate-300">{p.origin}</td>
                     <td className="px-3 py-2 text-slate-400">
-                      {[p.oneShot && 'ワンショット', p.loop && 'ループ']
+                      {[
+                        p.isPreset !== false && 'P',
+                        p.oneShot && 'ワンショット',
+                        p.loop && 'ループ',
+                      ]
                         .filter(Boolean)
                         .join(' / ') || '—'}
                     </td>

@@ -31,6 +31,7 @@ name: string            # 音色名（管理者が採取して命名）
 category: string        # Kick / Snare / Hihat / Loop / Synth / Voice / SE ...
 group: number|null      # グループ（1〜16）
 color: string           # 色名（NeonYellow / Orange / Red / Purple / Blue / LightBlue / Green / LightGreen）。未指定は空文字
+isPreset: boolean       # 工場プリセットかどうか（一覧で「P」表示。既定 true）
 oneShot: boolean        # ワンショット
 loop: boolean           # ループ
 origin: string|null     # 由来（SK-1 / SK-5 / CZ-101 / MT-40 / unknown）

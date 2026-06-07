@@ -136,6 +136,9 @@ export default function Presets() {
                       {p.name}
                     </div>
                     <div className="mt-0.5 flex flex-wrap gap-2 text-xs text-slate-400">
+                      {p.isPreset !== false && (
+                        <span className="rounded bg-emerald-700 px-1.5 py-0.5 font-bold text-white">P</span>
+                      )}
                       <span className="rounded bg-slate-800 px-1.5 py-0.5">{p.category}</span>
                       {p.group != null && (
                         <span className="rounded bg-slate-800 px-1.5 py-0.5">G{p.group}</span>

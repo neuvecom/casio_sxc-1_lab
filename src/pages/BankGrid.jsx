@@ -5,8 +5,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { BANK_COUNT, PAD_COUNT, SLOT_COUNT, slotId } from '../lib/banks.js'
 import { subscribeSlots, setSlot } from '../lib/slots.js'
-import { subscribePresets } from '../lib/presets.js'
+import { subscribePresets, colorHex } from '../lib/presets.js'
 import SlotModal from '../components/SlotModal.jsx'
+
+// 背景色（HEX）に対して読みやすい文字色を返す
+function textColorOn(hex) {
+  if (!hex) return 'text-white'
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b
+  return lum > 140 ? 'text-black' : 'text-white'
+}
 
 const TYPE_STYLE = {
   empty: 'bg-slate-800 hover:bg-slate-700',
@@ -116,6 +126,7 @@ export default function BankGrid() {
             {TYPE_LABEL[t]}
           </span>
         ))}
+        <span className="text-slate-500">※プリセットは音色の色で表示（「P」付き）</span>
       </div>
 
       {loading ? (
@@ -133,13 +144,37 @@ export default function BankGrid() {
                     const id = slotId(bank, pad)
                     const s = slots[id]
                     const type = s?.type || 'empty'
+
+                    let style
+                    let cls = TYPE_STYLE.empty
+                    let label = null
+                    let labelCls = ''
+
+                    if (type === 'preset') {
+                      const hex = colorHex(presetsById[s.presetId]?.color)
+                      if (hex) {
+                        style = { backgroundColor: hex }
+                        cls = 'hover:opacity-80'
+                        labelCls = textColorOn(hex)
+                      } else {
+                        cls = TYPE_STYLE.preset
+                        labelCls = 'text-white'
+                      }
+                      label = 'P'
+                    } else if (type === 'sample') {
+                      cls = TYPE_STYLE.sample
+                    }
+
                     return (
                       <button
                         key={id}
                         onClick={() => setEditing({ bank, pad })}
                         title={slotLabel(bank, pad, s)}
-                        className={`aspect-square rounded-sm ${TYPE_STYLE[type]}`}
-                      />
+                        style={style}
+                        className={`flex aspect-square items-center justify-center rounded-sm text-[10px] font-bold leading-none ${cls} ${labelCls}`}
+                      >
+                        {label}
+                      </button>
                     )
                   })}
                 </div>

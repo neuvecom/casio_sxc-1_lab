@@ -50,6 +50,7 @@ function normalize(form) {
     origin: form.origin || 'unknown',
     group: toNum(form.group), // 1〜16 または null
     color: form.color || '', // 色名（COLORS の name）または空
+    isPreset: form.isPreset !== false, // 工場プリセットかどうか（既定 true）
     oneShot: !!form.oneShot,
     loop: !!form.loop,
     defaultBank: toNum(form.defaultBank),
