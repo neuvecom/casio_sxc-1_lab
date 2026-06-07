@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// SXC-1 Lab の Firestore セキュリティルール（管理者キュレーション型）
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    // 管理者は Custom Claims (admin: true) で識別する
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    // ユーザー個別データ（slots / userPresetMeta / プロフィール等）は本人のみ
+    match /users/{uid}/{document=**} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // プリセット：閲覧はログインユーザー、作成・更新・削除は管理者のみ
+    // （集計フィールド ratingAvg / favoriteCount は Cloud Functions が Admin SDK で更新）
+    match /presets/{presetId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
