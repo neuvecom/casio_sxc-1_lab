@@ -53,6 +53,7 @@ function normalize(form) {
     isPreset: form.isPreset !== false, // 工場プリセットかどうか（既定 true）
     oneShot: !!form.oneShot,
     loop: !!form.loop,
+    bpm: toNum(form.bpm), // テンポ（数値または null）
     defaultBank: toNum(form.defaultBank),
     defaultPad: toNum(form.defaultPad),
     description: (form.description || '').trim(),

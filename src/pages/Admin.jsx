@@ -22,6 +22,7 @@ const EMPTY_FORM = {
   isPreset: true,
   oneShot: false,
   loop: false,
+  bpm: '',
   defaultBank: '',
   defaultPad: '',
   description: '',
@@ -88,6 +89,7 @@ export default function Admin() {
       isPreset: p.isPreset !== false,
       oneShot: !!p.oneShot,
       loop: !!p.loop,
+      bpm: p.bpm ?? '',
       defaultBank: p.defaultBank ?? '',
       defaultPad: p.defaultPad ?? '',
       description: p.description || '',
@@ -202,6 +204,14 @@ export default function Admin() {
               ループ
             </label>
           </div>
+          <label className="text-sm">
+            BPM
+            <input
+              type="number" min="0" step="0.1"
+              className={inputClass} value={form.bpm} onChange={update('bpm')}
+              placeholder="例：120"
+            />
+          </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
               既定バンク
@@ -267,6 +277,7 @@ export default function Admin() {
                   <th className="px-3 py-2">グループ</th>
                   <th className="px-3 py-2">由来</th>
                   <th className="px-3 py-2">種別</th>
+                  <th className="px-3 py-2">BPM</th>
                   <th className="px-3 py-2">既定</th>
                   <th className="px-3 py-2">説明</th>
                   <th className="px-3 py-2"></th>
@@ -299,6 +310,7 @@ export default function Admin() {
                         .filter(Boolean)
                         .join(' / ') || '—'}
                     </td>
+                    <td className="px-3 py-2 text-slate-400">{p.bpm ?? '—'}</td>
                     <td className="px-3 py-2 text-slate-400">
                       {p.defaultBank != null && p.defaultPad != null
                         ? `B${p.defaultBank}-P${p.defaultPad}`

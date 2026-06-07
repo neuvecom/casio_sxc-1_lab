@@ -34,6 +34,7 @@ color: string           # 色名（NeonYellow / Orange / Red / Purple / Blue / L
 isPreset: boolean       # 工場プリセットかどうか（一覧で「P」表示。既定 true）
 oneShot: boolean        # ワンショット
 loop: boolean           # ループ
+bpm: number|null        # テンポ（ループ素材など）
 origin: string|null     # 由来（SK-1 / SK-5 / CZ-101 / MT-40 / unknown）
 defaultBank: number|null  # 工場出荷時の既定バンク ※未確認
 defaultPad: number|null   # 工場出荷時の既定パッド ※未確認

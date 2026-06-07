@@ -148,6 +148,7 @@ export default function Presets() {
                       )}
                       {p.oneShot && <span className="rounded bg-slate-800 px-1.5 py-0.5">ワンショット</span>}
                       {p.loop && <span className="rounded bg-slate-800 px-1.5 py-0.5">ループ</span>}
+                      {p.bpm != null && <span className="rounded bg-slate-800 px-1.5 py-0.5">{p.bpm} BPM</span>}
                       {p.defaultBank != null && p.defaultPad != null && (
                         <span>B{p.defaultBank}-P{p.defaultPad}</span>
                       )}
