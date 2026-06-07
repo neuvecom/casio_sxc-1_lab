@@ -1,12 +1,21 @@
 // 1280スロット（80バンク × 16パッド）の空き状況ビジュアライズ。
 // Firestore（users/{uid}/slots）と接続し、パッドをクリックするとモーダルで
-// プリセット割当・サンプル名・メモを編集できる。
+// プリセット割当・サンプル名・メモを編集できる。ホバーで独自ツールチップを表示。
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { BANK_COUNT, PAD_COUNT, SLOT_COUNT, slotId } from '../lib/banks.js'
 import { subscribeSlots, setSlot } from '../lib/slots.js'
 import { subscribePresets, colorHex } from '../lib/presets.js'
 import SlotModal from '../components/SlotModal.jsx'
+
+const TYPE_STYLE = {
+  empty: 'bg-slate-800 hover:bg-slate-700',
+  preset: 'bg-emerald-600 hover:bg-emerald-500',
+  sample: 'bg-sky-600 hover:bg-sky-500',
+}
+const TYPE_LABEL = { empty: '空き', preset: 'プリセット', sample: 'サンプル' }
+
+const TOOLTIP_W = 280
 
 // 背景色（HEX）に対して読みやすい文字色を返す
 function textColorOn(hex) {
@@ -18,13 +27,6 @@ function textColorOn(hex) {
   return lum > 140 ? 'text-black' : 'text-white'
 }
 
-const TYPE_STYLE = {
-  empty: 'bg-slate-800 hover:bg-slate-700',
-  preset: 'bg-emerald-600 hover:bg-emerald-500',
-  sample: 'bg-sky-600 hover:bg-sky-500',
-}
-const TYPE_LABEL = { empty: '空き', preset: 'プリセット', sample: 'サンプル' }
-
 export default function BankGrid() {
   const { user } = useAuth()
   const [slots, setSlots] = useState({}) // slotId -> data
@@ -32,6 +34,7 @@ export default function BankGrid() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(null) // { bank, pad } | null
+  const [tip, setTip] = useState(null) // { x, y, title, body }
 
   // 自分のスロットを購読
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function BankGrid() {
     return unsub
   }, [user])
 
-  // プリセット一覧を購読（割当の選択肢・名前表示用）
+  // プリセット一覧を購読（割当の選択肢・名前・色・説明の表示用）
   useEffect(() => {
     const unsub = subscribePresets(setPresets, (e) =>
       setError(`プリセットの読み込みに失敗：${e.message}`),
@@ -69,18 +72,6 @@ export default function BankGrid() {
     [slots],
   )
 
-  // パッドのツールチップ（プリセットは「名前＋説明」を改行表示）
-  const slotLabel = (bank, pad, s) => {
-    if (!s || !s.type || s.type === 'empty') return `Bank ${bank} - Pad ${pad}：空き`
-    if (s.type === 'preset') {
-      const p = presetsById[s.presetId]
-      const name = p?.name || '(不明なプリセット)'
-      return p?.description ? `${name}\n${p.description}` : name
-    }
-    const name = s.sampleName || 'サンプル'
-    return s.memo ? `${name}\n${s.memo}` : name
-  }
-
   const handleSave = async (data) => {
     const { bank, pad } = editing
     const id = slotId(bank, pad)
@@ -97,6 +88,79 @@ export default function BankGrid() {
       setError(`保存に失敗しました：${e.message}`)
     }
   }
+
+  // バンクグリッド（ホバー状態に依存しないよう memo 化）
+  const grid = useMemo(() => {
+    return Array.from({ length: BANK_COUNT }, (_, b) => {
+      const bank = b + 1
+      return (
+        <div key={bank} className="rounded-md border border-slate-800 bg-slate-950 p-2">
+          <div className="mb-1 text-xs font-medium text-slate-400">Bank {bank}</div>
+          <div className="grid grid-cols-4 gap-1">
+            {Array.from({ length: PAD_COUNT }, (_, p) => {
+              const pad = p + 1
+              const id = slotId(bank, pad)
+              const s = slots[id]
+              const type = s?.type || 'empty'
+
+              let style
+              let cls = TYPE_STYLE.empty
+              let label = null
+              let labelCls = ''
+              let title = `Bank ${bank} - Pad ${pad}`
+              let body = '空き'
+
+              if (type === 'preset') {
+                const preset = presetsById[s.presetId]
+                const hex = colorHex(preset?.color)
+                if (hex) {
+                  style = { backgroundColor: hex }
+                  cls = 'hover:opacity-80'
+                  labelCls = textColorOn(hex)
+                } else {
+                  cls = TYPE_STYLE.preset
+                  labelCls = 'text-white'
+                }
+                label = 'P'
+                title = preset?.name || '(不明なプリセット)'
+                body = preset?.description || ''
+              } else if (type === 'sample') {
+                cls = TYPE_STYLE.sample
+                title = s.sampleName || 'サンプル'
+                body = s.memo || ''
+              }
+
+              return (
+                <button
+                  key={id}
+                  onClick={() => setEditing({ bank, pad })}
+                  onMouseEnter={(e) =>
+                    setTip({ x: e.clientX, y: e.clientY, title, body })
+                  }
+                  onMouseLeave={() => setTip(null)}
+                  style={style}
+                  className={`flex aspect-square items-center justify-center rounded-sm text-[10px] font-bold leading-none ${cls} ${labelCls}`}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )
+    })
+  }, [slots, presetsById])
+
+  // ツールチップの表示位置（画面端で反転）
+  const tipPos = tip
+    ? {
+        left:
+          tip.x + 14 + TOOLTIP_W > window.innerWidth
+            ? tip.x - 14 - TOOLTIP_W
+            : tip.x + 14,
+        top: Math.min(tip.y + 14, window.innerHeight - 80),
+      }
+    : null
 
   return (
     <div>
@@ -134,54 +198,20 @@ export default function BankGrid() {
         <div className="mt-6 text-slate-400">読み込み中…</div>
       ) : (
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-          {Array.from({ length: BANK_COUNT }, (_, b) => {
-            const bank = b + 1
-            return (
-              <div key={bank} className="rounded-md border border-slate-800 bg-slate-950 p-2">
-                <div className="mb-1 text-xs font-medium text-slate-400">Bank {bank}</div>
-                <div className="grid grid-cols-4 gap-1">
-                  {Array.from({ length: PAD_COUNT }, (_, p) => {
-                    const pad = p + 1
-                    const id = slotId(bank, pad)
-                    const s = slots[id]
-                    const type = s?.type || 'empty'
+          {grid}
+        </div>
+      )}
 
-                    let style
-                    let cls = TYPE_STYLE.empty
-                    let label = null
-                    let labelCls = ''
-
-                    if (type === 'preset') {
-                      const hex = colorHex(presetsById[s.presetId]?.color)
-                      if (hex) {
-                        style = { backgroundColor: hex }
-                        cls = 'hover:opacity-80'
-                        labelCls = textColorOn(hex)
-                      } else {
-                        cls = TYPE_STYLE.preset
-                        labelCls = 'text-white'
-                      }
-                      label = 'P'
-                    } else if (type === 'sample') {
-                      cls = TYPE_STYLE.sample
-                    }
-
-                    return (
-                      <button
-                        key={id}
-                        onClick={() => setEditing({ bank, pad })}
-                        title={slotLabel(bank, pad, s)}
-                        style={style}
-                        className={`flex aspect-square items-center justify-center rounded-sm text-[10px] font-bold leading-none ${cls} ${labelCls}`}
-                      >
-                        {label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
+      {/* 独自ツールチップ（即時表示） */}
+      {tip && (
+        <div
+          className="pointer-events-none fixed z-50 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-xs shadow-xl"
+          style={{ left: tipPos.left, top: tipPos.top, width: TOOLTIP_W }}
+        >
+          <div className="font-semibold text-slate-100">{tip.title}</div>
+          {tip.body && (
+            <div className="mt-0.5 whitespace-pre-wrap text-slate-400">{tip.body}</div>
+          )}
         </div>
       )}
 
