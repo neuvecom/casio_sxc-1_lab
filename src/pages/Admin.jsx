@@ -268,6 +268,7 @@ export default function Admin() {
                   <th className="px-3 py-2">由来</th>
                   <th className="px-3 py-2">種別</th>
                   <th className="px-3 py-2">既定</th>
+                  <th className="px-3 py-2">説明</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -302,6 +303,11 @@ export default function Admin() {
                       {p.defaultBank != null && p.defaultPad != null
                         ? `B${p.defaultBank}-P${p.defaultPad}`
                         : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-slate-400">
+                      <div className="max-w-[18rem] truncate" title={p.description}>
+                        {p.description || '—'}
+                      </div>
                     </td>
                     <td className="px-3 py-2 text-right whitespace-nowrap">
                       <button

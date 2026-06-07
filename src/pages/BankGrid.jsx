@@ -69,15 +69,16 @@ export default function BankGrid() {
     [slots],
   )
 
-  // スロットに表示するラベル（ツールチップ用）
+  // パッドのツールチップ（プリセットは「名前＋説明」を改行表示）
   const slotLabel = (bank, pad, s) => {
-    const head = `Bank ${bank} - Pad ${pad}`
-    if (!s || !s.type || s.type === 'empty') return `${head}：空き`
+    if (!s || !s.type || s.type === 'empty') return `Bank ${bank} - Pad ${pad}：空き`
     if (s.type === 'preset') {
-      const name = presetsById[s.presetId]?.name || '(不明なプリセット)'
-      return `${head}：${name}`
+      const p = presetsById[s.presetId]
+      const name = p?.name || '(不明なプリセット)'
+      return p?.description ? `${name}\n${p.description}` : name
     }
-    return `${head}：${s.sampleName || 'サンプル'}`
+    const name = s.sampleName || 'サンプル'
+    return s.memo ? `${name}\n${s.memo}` : name
   }
 
   const handleSave = async (data) => {
