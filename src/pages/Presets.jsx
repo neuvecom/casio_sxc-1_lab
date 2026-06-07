@@ -125,12 +125,25 @@ export default function Presets() {
               <div key={p.id} className="rounded-lg border border-slate-800 bg-slate-950 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <div className="font-semibold">{p.name}</div>
+                    <div className="flex items-center gap-2 font-semibold">
+                      {p.color && (
+                        <span
+                          className="inline-block h-3 w-3 shrink-0 rounded-full border border-slate-600"
+                          style={{ backgroundColor: p.color }}
+                        />
+                      )}
+                      {p.name}
+                    </div>
                     <div className="mt-0.5 flex flex-wrap gap-2 text-xs text-slate-400">
                       <span className="rounded bg-slate-800 px-1.5 py-0.5">{p.category}</span>
+                      {p.group && (
+                        <span className="rounded bg-slate-800 px-1.5 py-0.5">{p.group}</span>
+                      )}
                       {p.origin && p.origin !== 'unknown' && (
                         <span className="rounded bg-slate-800 px-1.5 py-0.5">{p.origin}</span>
                       )}
+                      {p.oneShot && <span className="rounded bg-slate-800 px-1.5 py-0.5">ワンショット</span>}
+                      {p.loop && <span className="rounded bg-slate-800 px-1.5 py-0.5">ループ</span>}
                       {p.defaultBank != null && p.defaultPad != null && (
                         <span>B{p.defaultBank}-P{p.defaultPad}</span>
                       )}

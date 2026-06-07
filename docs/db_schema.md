@@ -29,6 +29,10 @@ createdAt: timestamp
 ```
 name: string            # 音色名（管理者が採取して命名）
 category: string        # Kick / Snare / Hihat / Loop / Synth / Voice / SE ...
+group: string           # グループ（例: ドラム / ベース / FX）
+color: string           # 色（HEX 文字列。未指定は空文字）
+oneShot: boolean        # ワンショット
+loop: boolean           # ループ
 origin: string|null     # 由来（SK-1 / SK-5 / CZ-101 / MT-40 / unknown）
 defaultBank: number|null  # 工場出荷時の既定バンク ※未確認
 defaultPad: number|null   # 工場出荷時の既定パッド ※未確認

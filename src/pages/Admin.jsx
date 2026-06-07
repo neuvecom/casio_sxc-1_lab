@@ -14,6 +14,10 @@ const EMPTY_FORM = {
   name: '',
   category: 'Other',
   origin: 'unknown',
+  group: '',
+  color: '',
+  oneShot: false,
+  loop: false,
   defaultBank: '',
   defaultPad: '',
   description: '',
@@ -43,6 +47,7 @@ export default function Admin() {
   }, [])
 
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const updateCheck = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.checked }))
 
   const resetForm = () => {
     setForm(EMPTY_FORM)
@@ -74,6 +79,10 @@ export default function Admin() {
       name: p.name || '',
       category: p.category || 'Other',
       origin: p.origin || 'unknown',
+      group: p.group || '',
+      color: p.color || '',
+      oneShot: !!p.oneShot,
+      loop: !!p.loop,
       defaultBank: p.defaultBank ?? '',
       defaultPad: p.defaultPad ?? '',
       description: p.description || '',
@@ -137,6 +146,46 @@ export default function Admin() {
               ))}
             </select>
           </label>
+          <label className="text-sm">
+            グループ
+            <input
+              className={inputClass}
+              value={form.group}
+              onChange={update('group')}
+              placeholder="例：ドラム / ベース / FX"
+            />
+          </label>
+          <div className="text-sm">
+            色
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                type="color"
+                value={form.color || '#10b981'}
+                onChange={update('color')}
+                className="h-9 w-12 cursor-pointer rounded border border-slate-700 bg-slate-900"
+              />
+              <span className="text-xs text-slate-400">{form.color || 'なし'}</span>
+              {form.color && (
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, color: '' }))}
+                  className="text-xs text-slate-400 underline hover:text-slate-200"
+                >
+                  クリア
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex items-end gap-4 text-sm">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={form.oneShot} onChange={updateCheck('oneShot')} />
+              ワンショット
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={form.loop} onChange={updateCheck('loop')} />
+              ループ
+            </label>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
               既定バンク
@@ -199,7 +248,9 @@ export default function Admin() {
                 <tr>
                   <th className="px-3 py-2">音色名</th>
                   <th className="px-3 py-2">カテゴリ</th>
+                  <th className="px-3 py-2">グループ</th>
                   <th className="px-3 py-2">由来</th>
+                  <th className="px-3 py-2">種別</th>
                   <th className="px-3 py-2">既定</th>
                   <th className="px-3 py-2"></th>
                 </tr>
@@ -207,9 +258,25 @@ export default function Admin() {
               <tbody>
                 {presets.map((p) => (
                   <tr key={p.id} className="border-t border-slate-800">
-                    <td className="px-3 py-2 font-medium">{p.name}</td>
+                    <td className="px-3 py-2 font-medium">
+                      <span className="flex items-center gap-2">
+                        {p.color && (
+                          <span
+                            className="inline-block h-3 w-3 shrink-0 rounded-full border border-slate-600"
+                            style={{ backgroundColor: p.color }}
+                          />
+                        )}
+                        {p.name}
+                      </span>
+                    </td>
                     <td className="px-3 py-2 text-slate-300">{p.category}</td>
+                    <td className="px-3 py-2 text-slate-300">{p.group || '—'}</td>
                     <td className="px-3 py-2 text-slate-300">{p.origin}</td>
+                    <td className="px-3 py-2 text-slate-400">
+                      {[p.oneShot && 'ワンショット', p.loop && 'ループ']
+                        .filter(Boolean)
+                        .join(' / ') || '—'}
+                    </td>
                     <td className="px-3 py-2 text-slate-400">
                       {p.defaultBank != null && p.defaultPad != null
                         ? `B${p.defaultBank}-P${p.defaultPad}`
