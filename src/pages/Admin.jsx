@@ -17,6 +17,22 @@ import {
 const PRESET_BANK_MAX = 14
 const BANK_TABS = [...Array.from({ length: PRESET_BANK_MAX }, (_, i) => i + 1), 'unset', 'all']
 
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 5.79l-.83 13.883A2.25 2.25 0 0115.084 21H8.916a2.25 2.25 0 01-2.244-2.327L5.84 5.79m12.32 0a48.108 48.108 0 00-3.478-.397m0 0V4.875c0-.621-.504-1.125-1.125-1.125h-3.026c-.621 0-1.125.504-1.125 1.125v.518m4.276 0a48.11 48.11 0 00-4.276 0" />
+    </svg>
+  )
+}
+
 const EMPTY_FORM = {
   name: '',
   category: 'Other',
@@ -378,15 +394,19 @@ export default function Admin() {
                     <td className="px-3 py-2 text-right whitespace-nowrap">
                       <button
                         onClick={() => handleEdit(p)}
-                        className="rounded px-2 py-1 text-emerald-400 hover:bg-slate-800"
+                        title="編集"
+                        aria-label="編集"
+                        className="inline-flex rounded p-1.5 text-emerald-400 hover:bg-slate-800"
                       >
-                        編集
+                        <PencilIcon />
                       </button>
                       <button
                         onClick={() => handleDelete(p)}
-                        className="rounded px-2 py-1 text-rose-400 hover:bg-slate-800"
+                        title="削除"
+                        aria-label="削除"
+                        className="inline-flex rounded p-1.5 text-rose-400 hover:bg-slate-800"
                       >
-                        削除
+                        <TrashIcon />
                       </button>
                     </td>
                   </tr>
