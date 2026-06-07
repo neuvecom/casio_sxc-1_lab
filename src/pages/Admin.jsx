@@ -1,6 +1,6 @@
 // 管理者ページ（フェーズ0）：プリセットの登録・編集・削除。
 // 実機を鳴らしながら音色を採取して登録する想定。
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CATEGORIES,
   ORIGINS,
@@ -12,6 +12,10 @@ import {
   updatePreset,
   deletePreset,
 } from '../lib/presets.js'
+
+// 登録済み一覧のバンク切り替えタブ（プリセットは B1〜B14）
+const PRESET_BANK_MAX = 14
+const BANK_TABS = [...Array.from({ length: PRESET_BANK_MAX }, (_, i) => i + 1), 'unset', 'all']
 
 const EMPTY_FORM = {
   name: '',
@@ -36,6 +40,30 @@ export default function Admin() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [editingId, setEditingId] = useState(null) // null=新規, それ以外=編集中
   const [busy, setBusy] = useState(false)
+  const [selectedBank, setSelectedBank] = useState(1) // 一覧の表示バンク
+
+  // バンクごとの件数
+  const counts = useMemo(() => {
+    const m = {}
+    presets.forEach((p) => {
+      const k = p.defaultBank ?? 'unset'
+      m[k] = (m[k] || 0) + 1
+    })
+    return m
+  }, [presets])
+
+  // 選択中バンクのプリセット（パッド順 → 名前順）
+  const visible = useMemo(() => {
+    let list
+    if (selectedBank === 'all') list = presets
+    else if (selectedBank === 'unset') list = presets.filter((p) => p.defaultBank == null)
+    else list = presets.filter((p) => p.defaultBank === selectedBank)
+    return [...list].sort(
+      (a, b) =>
+        (a.defaultPad ?? 99) - (b.defaultPad ?? 99) ||
+        (a.name || '').localeCompare(b.name || ''),
+    )
+  }, [presets, selectedBank])
 
   useEffect(() => {
     const unsub = subscribePresets(
@@ -263,10 +291,36 @@ export default function Admin() {
         <div className="mb-2 text-sm text-slate-400">
           登録済み：{presets.length} 件
         </div>
+
+        {/* バンク切り替えタブ */}
+        <div className="mb-3 flex flex-wrap gap-1">
+          {BANK_TABS.map((b) => {
+            const active = selectedBank === b
+            const label = b === 'all' ? 'すべて' : b === 'unset' ? '未設定' : `B${b}`
+            const c = b === 'all' ? presets.length : counts[b] || 0
+            return (
+              <button
+                key={b}
+                onClick={() => setSelectedBank(b)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+                  active
+                    ? 'bg-emerald-600 text-white'
+                    : 'border border-slate-700 text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                {label}
+                {c > 0 && <span className="ml-1 opacity-70">({c})</span>}
+              </button>
+            )
+          })}
+        </div>
+
         {loading ? (
           <div className="text-slate-400">読み込み中…</div>
         ) : presets.length === 0 ? (
           <div className="text-slate-500">まだ登録がありません。</div>
+        ) : visible.length === 0 ? (
+          <div className="text-slate-500">このバンクにはプリセットがありません。</div>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-slate-800">
             <table className="w-full text-left text-sm">
@@ -284,7 +338,7 @@ export default function Admin() {
                 </tr>
               </thead>
               <tbody>
-                {presets.map((p) => (
+                {visible.map((p) => (
                   <tr key={p.id} className="border-t border-slate-800">
                     <td className="px-3 py-2 font-medium">
                       <span className="flex items-center gap-2">
