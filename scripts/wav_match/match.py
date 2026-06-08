@@ -101,16 +101,25 @@ def load_signal(path: Path, sr: int, max_sec: float):
 
 
 def ncc(a: np.ndarray, b: np.ndarray) -> float:
-    """正規化相互相関の最大値（全ラグ）。同一録音なら ~1.0、別物は低い。"""
+    """局所正規化の相互相関（テンプレートマッチング）の最大値。
+    短い方 a を長い方 b 上で滑らせ、各位置で「重なり区間のエネルギー」で正規化する。
+    本体音が購入音の一部（先頭やリリース前まで）でも、一致すれば ~1.0 になる。"""
     if a.size == 0 or b.size == 0:
         return 0.0
-    a = a - a.mean()
-    b = b - b.mean()
-    L = a.size + b.size - 1
-    nfft = 1 << (L - 1).bit_length()
-    cc = np.fft.irfft(np.fft.rfft(a, nfft) * np.fft.rfft(b[::-1], nfft), nfft)[:L]
-    denom = np.sqrt((a * a).sum() * (b * b).sum())
-    return float(cc.max() / denom) if denom > 0 else 0.0
+    if a.size > b.size:
+        a, b = b, a
+    na, nb = a.size, b.size
+    # 分子: num[k] = Σ_j a[j]*b[k+j]（valid相関）を FFT で計算
+    nfft = 1 << (na + nb - 2).bit_length()
+    conv = np.fft.irfft(np.fft.rfft(b, nfft) * np.fft.rfft(a[::-1], nfft), nfft)
+    num = conv[na - 1 : nb]  # k = 0..nb-na
+    # 分母: ||a|| * sqrt(各窓 b[k:k+na] のエネルギー)
+    a_norm = np.sqrt(float((a * a).sum()))
+    csum = np.concatenate([[0.0], np.cumsum(b.astype(np.float64) ** 2)])
+    win_energy = csum[na : nb + 1] - csum[: nb - na + 1]
+    denom = a_norm * np.sqrt(win_energy)
+    denom[denom == 0] = 1e-12
+    return float((num / denom).max())
 
 
 def parse_device(path: Path, root: Path, bank_offset: int = 0):
@@ -212,6 +221,8 @@ def main() -> None:
                     help="波形相互相関での精緻化を行わず MFCC のみで照合（高速・低精度）")
     ap.add_argument("--topk", type=int, default=20,
                     help="MFCCで絞り込む候補数（この中から波形相関で最良を選ぶ）")
+    ap.add_argument("--refine-all", action="store_true",
+                    help="MFCC候補に頼らず全購入音と波形相関（高精度・低速）")
     ap.add_argument("--refine-sr", type=int, default=8000)
     ap.add_argument("--refine-seconds", type=float, default=5.0)
     args = ap.parse_args()
@@ -266,7 +277,11 @@ def main() -> None:
             ref_cache: dict[int, np.ndarray] = {}
             for i in todo:
                 dsig = load_signal(dev_paths[i], args.refine_sr, args.refine_seconds)
-                cand = np.argsort(sim[i])[::-1][: args.topk]
+                cand = (
+                    np.argsort(sim[i])[::-1]
+                    if args.refine_all
+                    else np.argsort(sim[i])[::-1][: args.topk]
+                )
                 bi, bs = int(cand[0]), -1.0
                 for j in cand:
                     j = int(j)
