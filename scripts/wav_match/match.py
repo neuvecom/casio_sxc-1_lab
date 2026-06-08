@@ -70,6 +70,31 @@ def embed(path: Path, sr: int, n_mfcc: int):
     return vec / norm if norm > 0 else vec
 
 
+def load_signal(path: Path, sr: int, max_sec: float):
+    """波形相関用に、低SR・モノ・無音トリム・ピーク正規化した先頭区間を返す。"""
+    try:
+        y, _ = librosa.load(str(path), sr=sr, mono=True, duration=max_sec * 4)
+    except Exception:  # noqa: BLE001
+        return np.zeros(0)
+    y, _ = librosa.effects.trim(y, top_db=30)
+    y = y[: int(sr * max_sec)]
+    peak = np.max(np.abs(y)) if y.size else 0
+    return y / peak if peak > 0 else y
+
+
+def ncc(a: np.ndarray, b: np.ndarray) -> float:
+    """正規化相互相関の最大値（全ラグ）。同一録音なら ~1.0、別物は低い。"""
+    if a.size == 0 or b.size == 0:
+        return 0.0
+    a = a - a.mean()
+    b = b - b.mean()
+    L = a.size + b.size - 1
+    nfft = 1 << (L - 1).bit_length()
+    cc = np.fft.irfft(np.fft.rfft(a, nfft) * np.fft.rfft(b[::-1], nfft), nfft)[:L]
+    denom = np.sqrt((a * a).sum() * (b * b).sum())
+    return float(cc.max() / denom) if denom > 0 else 0.0
+
+
 def parse_device(path: Path, root: Path, bank_offset: int = 0):
     """本体パス → (bank, pad)。{NN}_name/{MM}.wav や bank00/01.wav を想定。
     bank_offset: 本体が 0 始まり(bank00=Bank1)の場合に 1 を指定。"""
@@ -158,10 +183,17 @@ def main() -> None:
                     help="購入音源の有り/無しカバレッジCSVを出力するパス")
     ap.add_argument("--sr", type=int, default=22050)
     ap.add_argument("--n-mfcc", type=int, default=20)
-    ap.add_argument("--threshold", type=float, default=0.92)
+    ap.add_argument("--threshold", type=float, default=0.9,
+                    help="confident とみなす類似度（精緻化時は波形相関の値）")
     ap.add_argument("--dup-threshold", type=float, default=0.985)
     ap.add_argument("--bank-offset", type=int, default=0,
                     help="本体が0始まり(bank00=Bank1)なら 1 を指定")
+    ap.add_argument("--no-refine", action="store_true",
+                    help="波形相互相関での精緻化を行わず MFCC のみで照合（高速・低精度）")
+    ap.add_argument("--topk", type=int, default=20,
+                    help="MFCCで絞り込む候補数（この中から波形相関で最良を選ぶ）")
+    ap.add_argument("--refine-sr", type=int, default=8000)
+    ap.add_argument("--refine-seconds", type=float, default=5.0)
     args = ap.parse_args()
 
     print(f"購入WAV を読み込み中: {args.reference}")
@@ -174,10 +206,30 @@ def main() -> None:
         sys.exit("WAV が見つかりません。フォルダを確認してください。")
 
     ref_meta = [parse_reference(p, args.reference) for p in ref_paths]
-    sim = dev_mat @ ref_mat.T
-    best = sim.argmax(axis=1)
-    best_sim = sim.max(axis=1)
+    sim = dev_mat @ ref_mat.T  # MFCC コサイン類似度（候補絞り込み・カバレッジ用）
     dup = duplicate_groups(dev_mat, args.dup_threshold)
+
+    # 照合: MFCCで上位候補に絞り、波形の相互相関で最良を選ぶ（既定）
+    if args.no_refine:
+        best = sim.argmax(axis=1)
+        best_sim = sim.max(axis=1)
+    else:
+        print("波形相関で精緻化中…（MFCC上位候補を波形照合）")
+        dev_sig = [load_signal(p, args.refine_sr, args.refine_seconds) for p in dev_paths]
+        ref_cache: dict[int, np.ndarray] = {}
+        best = np.empty(len(dev_paths), dtype=int)
+        best_sim = np.empty(len(dev_paths))
+        for i in range(len(dev_paths)):
+            cand = np.argsort(sim[i])[::-1][: args.topk]
+            bi, bs = int(cand[0]), -1.0
+            for j in cand:
+                j = int(j)
+                if j not in ref_cache:
+                    ref_cache[j] = load_signal(ref_paths[j], args.refine_sr, args.refine_seconds)
+                sc = ncc(dev_sig[i], ref_cache[j])
+                if sc > bs:
+                    bs, bi = sc, j
+            best[i], best_sim[i] = bi, bs
 
     rows = []
     for i, p in enumerate(dev_paths):
