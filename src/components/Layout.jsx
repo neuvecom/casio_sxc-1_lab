@@ -80,6 +80,14 @@ export default function Layout({ children }) {
         </div>
       )}
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+      <footer className="border-t border-slate-800 bg-slate-950">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-4 text-xs text-slate-500">
+          <span>SXC-1 Lab（運営: ヘボ談）</span>
+          <Link to="/privacy" className="hover:text-slate-300">プライバシーポリシー</Link>
+          <Link to="/terms" className="hover:text-slate-300">利用規約</Link>
+          <a href="mailto:tsunomegane@gmail.com" className="hover:text-slate-300">お問い合わせ</a>
+        </div>
+      </footer>
     </div>
   )
 }

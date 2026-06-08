@@ -10,11 +10,15 @@ import Presets from './pages/Presets.jsx'
 import Feedback from './pages/Feedback.jsx'
 import Admin from './pages/Admin.jsx'
 import AdminFeedback from './pages/AdminFeedback.jsx'
+import Privacy from './pages/Privacy.jsx'
+import Terms from './pages/Terms.jsx'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/privacy" element={<Layout><Privacy /></Layout>} />
+      <Route path="/terms" element={<Layout><Terms /></Layout>} />
       <Route
         path="/"
         element={
