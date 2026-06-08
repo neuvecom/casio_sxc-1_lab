@@ -31,16 +31,34 @@ python scripts/wav_match/match.py \
 | `--sr` | 22050 | 解析サンプルレート |
 | `--n-mfcc` | 20 | MFCC 次数 |
 
+## データ構造の前提
+
+```
+本体:  {bank番号}_{bank名}/{pad番号}.wav     例) 01_MyBank/03.wav → Bank1 Pad3
+購入:  {one_shot|loop}/{カテゴリ}/{機種}_{SR}_{音程}_{音色名}.wav
+       例) one_shot/keys/MT-40_48_C-3_Accordion.wav
+```
+
+- 本体はパスから **bank/pad が確定** → 結果は該当スロットに直接対応づく。
+- 購入はファイル名から **機種・音程・音色名**、親ディレクトリから **カテゴリ・loop/oneshot** を抽出。
+
 ## 出力 `matches.csv`
 
 | 列 | 内容 |
 | --- | --- |
-| `device_file` | 本体WAVのファイル名 |
-| `best_reference` | 最も近い購入WAV |
-| `origin` | 購入WAV名から推定した機種（SK-1/SK-5/CZ-101/MT-40/unknown） |
+| `bank` / `pad` / `slot_id` | 本体パスから抽出したバンク・パッド（`b1-p3` 形式） |
+| `device_file` | 本体WAV（相対パス） |
+| `best_reference` | 最も近い購入WAV（相対パス） |
+| `origin` | 機種（SK-1/SK-5/CZ-101/MT-40/unknown） |
+| `sound_name` | 購入ファイル名の音色名（例 Accordion） |
+| `note` | 音程（例 C-3） |
+| `category` | 購入の親カテゴリ |
+| `type` | one_shot / loop |
 | `similarity` | 類似度(0〜1)。高いほど一致 |
 | `confident` | しきい値以上なら True（自動確定の目安） |
 | `dup_group` | 本体内の重複クラスタID（同IDは同一音の可能性） |
+
+行は bank → pad 順に並ぶので、そのままスロット単位で確認・取り込みしやすい。
 
 ## 運用の流れ（想定）
 
