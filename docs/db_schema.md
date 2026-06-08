@@ -45,6 +45,11 @@ ratingCount: number     # 集計値
 favoriteCount: number   # 集計値（ランキングの主指標）
 createdAt: timestamp
 updatedAt: timestamp
+# WAV照合の結果（scripts/import_matches.mjs が付与。手入力項目は上書きしない）
+match: {                # 任意。照合で同定した補助情報
+  reference, name, note, category, type,
+  similarity, confident, dupGroup, matchedAt
+} | null
 ```
 
 ### `users/{uid}/slots/{slotId}` — 自分の1280スロット（個別）
