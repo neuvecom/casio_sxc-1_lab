@@ -90,15 +90,10 @@ export default function SlotModal({ bank, pad, initial, presets, onSave, onClose
           </label>
         )}
 
-        {/* 選択中プリセットの詳細（由来・照合情報） */}
+        {/* 選択中プリセットの詳細 */}
         {type === 'preset' && selectedPreset && (
           <div className="mt-3 rounded-md border border-slate-800 bg-slate-900 p-3 text-sm">
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-slate-300">
-              {selectedPreset.origin && selectedPreset.origin !== 'unknown' && (
-                <span>由来: <span className="text-emerald-400">{selectedPreset.origin}</span></span>
-              )}
-              {selectedPreset.match?.name && <span>照合名: {selectedPreset.match.name}</span>}
-              {selectedPreset.match?.note && <span>音程: {selectedPreset.match.note}</span>}
               {selectedPreset.category && <span>カテゴリ: {selectedPreset.category}</span>}
               {selectedPreset.bpm != null && <span>{selectedPreset.bpm} BPM</span>}
             </div>

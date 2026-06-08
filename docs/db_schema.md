@@ -35,7 +35,6 @@ isPreset: boolean       # 工場プリセットかどうか（一覧で「P」�
 oneShot: boolean        # ワンショット
 loop: boolean           # ループ
 bpm: number|null        # テンポ（ループ素材など）
-origin: string|null     # 由来（SK-1 / SK-5 / CZ-101 / MT-40 / unknown）
 defaultBank: number|null  # 工場出荷時の既定バンク ※未確認
 defaultPad: number|null   # 工場出荷時の既定パッド ※未確認
 description: string
@@ -45,12 +44,13 @@ ratingCount: number     # 集計値
 favoriteCount: number   # 集計値（ランキングの主指標）
 createdAt: timestamp
 updatedAt: timestamp
-# WAV照合の結果（scripts/import_matches.mjs が付与。手入力項目は上書きしない）
-match: {                # 任意。照合で同定した補助情報
-  reference, name, note, category, type,
-  similarity, confident, dupGroup, matchedAt
-} | null
 ```
+
+> 由来(origin)・WAV照合(match)は方針転換により保持しない（2026-06-08）。
+> 検証の結果、本体プリセットの大半は元機種の音そのままではなく加工/派生/オリジナルで、
+> 由来を断定できるのは完全一致した一部のみ。レトロ機の再現は「ユーザーが購入した
+> サンプルパックを各スロットに登録する（type=sample）」運用で対応する。
+> 調査・照合ツールは `scripts/wav_match/`・`docs/reference/` に記録として残す。
 
 ### `users/{uid}/slots/{slotId}` — 自分の1280スロット（個別）
 `slotId` は `b{bank}-p{pad}`（bank: 1〜80, pad: 1〜16）。

@@ -108,7 +108,6 @@ export default function BankGrid() {
               let label = null
               let labelCls = ''
               let title = `Bank ${bank} - Pad ${pad}`
-              let ident = ''
               let body = '空き'
 
               if (type === 'preset') {
@@ -124,12 +123,6 @@ export default function BankGrid() {
                 }
                 label = 'P'
                 title = preset?.name || '(不明なプリセット)'
-                // 同定情報（由来 / 照合名 / 音程）
-                ident = [
-                  preset?.origin && preset.origin !== 'unknown' ? preset.origin : null,
-                  preset?.match?.name,
-                  preset?.match?.note,
-                ].filter(Boolean).join(' / ')
                 body = preset?.description || ''
               } else if (type === 'sample') {
                 cls = TYPE_STYLE.sample
@@ -142,7 +135,7 @@ export default function BankGrid() {
                   key={id}
                   onClick={() => setEditing({ bank, pad })}
                   onMouseEnter={(e) =>
-                    setTip({ x: e.clientX, y: e.clientY, title, ident, body })
+                    setTip({ x: e.clientX, y: e.clientY, title, body })
                   }
                   onMouseLeave={() => setTip(null)}
                   style={style}
@@ -216,7 +209,6 @@ export default function BankGrid() {
           style={{ left: tipPos.left, top: tipPos.top, width: TOOLTIP_W }}
         >
           <div className="font-semibold text-slate-100">{tip.title}</div>
-          {tip.ident && <div className="mt-0.5 text-emerald-400">{tip.ident}</div>}
           {tip.body && (
             <div className="mt-0.5 whitespace-pre-wrap text-slate-400">{tip.body}</div>
           )}

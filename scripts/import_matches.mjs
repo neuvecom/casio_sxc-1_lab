@@ -31,6 +31,7 @@ const { values } = parseArgs({
     apply: { type: 'boolean', default: false },
     'confident-only': { type: 'boolean', default: false },
     reset: { type: 'boolean', default: false },
+    'clear-all': { type: 'boolean', default: false },
   },
 })
 
@@ -69,6 +70,34 @@ async function main() {
   }
   admin.initializeApp({ credential: admin.credential.cert(sa) })
   const db = admin.firestore()
+
+  // --- 全クリア: 自動反映した origin / match をプリセットから削除 ---
+  if (values['clear-all']) {
+    const snap = await db.collection('presets').get()
+    const targets = snap.docs.filter(
+      (d) => d.get('match') !== undefined || d.get('origin') !== undefined,
+    )
+    console.log(`presets ${snap.size}件 / クリア対象 ${targets.length}件`)
+    if (!values.apply) {
+      console.log('[DRY RUN] --apply で各プリセットの origin と match を削除します')
+      process.exit(0)
+    }
+    let n = 0
+    for (let i = 0; i < targets.length; i += 400) {
+      const batch = db.batch()
+      for (const d of targets.slice(i, i + 400)) {
+        batch.set(
+          d.ref,
+          { origin: admin.firestore.FieldValue.delete(), match: admin.firestore.FieldValue.delete() },
+          { merge: true },
+        )
+        n++
+      }
+      await batch.commit()
+    }
+    console.log(`✔ ${n} 件の origin/match を削除しました`)
+    process.exit(0)
+  }
 
   // uid 解決
   let uid = values.uid

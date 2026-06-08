@@ -13,7 +13,6 @@ import {
 import { db } from './firebase.js'
 
 export const CATEGORIES = ['Kick', 'Snare', 'Hihat', 'Loop', 'Synth', 'Bass', 'Voice', 'SE', 'Other']
-export const ORIGINS = ['SK-1', 'SK-5', 'CZ-101', 'MT-40', 'unknown']
 
 // グループは 1〜16 の数字
 export const GROUPS = Array.from({ length: 16 }, (_, i) => i + 1)
@@ -47,7 +46,6 @@ function normalize(form) {
   return {
     name: (form.name || '').trim(),
     category: form.category || 'Other',
-    origin: form.origin || 'unknown',
     group: toNum(form.group), // 1〜16 または null
     color: form.color || '', // 色名（COLORS の name）または空
     isPreset: form.isPreset !== false, // 工場プリセットかどうか（既定 true）
