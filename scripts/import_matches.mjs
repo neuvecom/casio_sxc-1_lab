@@ -13,6 +13,12 @@
 //   3. 実際に反映:
 //        node scripts/import_matches.mjs --csv matches.csv --apply
 //   --uid を省略するとユーザーが1人ならそれを自動採用、複数なら一覧表示して終了。
+//
+// オプション:
+//   --confident-only  confident(完全一致＋高相関)の行だけ反映。誤マッチを入れない（推奨）
+//   --reset           --confident-only と併用時、未同定スロットの過去の反映をクリア
+//                     （origin=unknown, match削除）。誤反映の修正に使う
+//   推奨: node scripts/import_matches.mjs --csv matches.csv --confident-only --reset --apply
 import admin from 'firebase-admin'
 import { readFile } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
@@ -23,6 +29,9 @@ const { values } = parseArgs({
     uid: { type: 'string' },
     key: { type: 'string', default: 'serviceAccountKey.json' },
     apply: { type: 'boolean', default: false },
+    'confident-only': { type: 'boolean', default: false },
+    reset: { type: 'boolean', default: false },
+    'clear-all': { type: 'boolean', default: false },
   },
 })
 
@@ -62,6 +71,34 @@ async function main() {
   admin.initializeApp({ credential: admin.credential.cert(sa) })
   const db = admin.firestore()
 
+  // --- 全クリア: 自動反映した origin / match をプリセットから削除 ---
+  if (values['clear-all']) {
+    const snap = await db.collection('presets').get()
+    const targets = snap.docs.filter(
+      (d) => d.get('match') !== undefined || d.get('origin') !== undefined,
+    )
+    console.log(`presets ${snap.size}件 / クリア対象 ${targets.length}件`)
+    if (!values.apply) {
+      console.log('[DRY RUN] --apply で各プリセットの origin と match を削除します')
+      process.exit(0)
+    }
+    let n = 0
+    for (let i = 0; i < targets.length; i += 400) {
+      const batch = db.batch()
+      for (const d of targets.slice(i, i + 400)) {
+        batch.set(
+          d.ref,
+          { origin: admin.firestore.FieldValue.delete(), match: admin.firestore.FieldValue.delete() },
+          { merge: true },
+        )
+        n++
+      }
+      await batch.commit()
+    }
+    console.log(`✔ ${n} 件の origin/match を削除しました`)
+    process.exit(0)
+  }
+
   // uid 解決
   let uid = values.uid
   if (!uid) {
@@ -84,15 +121,33 @@ async function main() {
     if (v.presetId) slotToPreset[d.id] = v.presetId
   })
 
+  const confidentOnly = values['confident-only']
   const updates = []
   let missing = 0
+  let skipped = 0
+  let cleared = 0
   for (const r of rows) {
     const slotId = r.slot_id || `b${r.bank}-p${r.pad}`
     const presetId = slotToPreset[slotId]
     if (!presetId) { missing++; continue }
+    const confident = String(r.confident).toLowerCase() === 'true'
+
+    if (!confident && confidentOnly) {
+      // 未同定: --reset 指定時のみ、過去の誤反映をクリア（origin=unknown, match削除）
+      if (values.reset) {
+        updates.push({
+          presetId, slotId, kind: 'clear',
+          data: { origin: 'unknown', match: admin.firestore.FieldValue.delete() },
+        })
+        cleared++
+      } else {
+        skipped++
+      }
+      continue
+    }
+
     updates.push({
-      presetId,
-      slotId,
+      presetId, slotId, kind: confident ? 'confident' : 'best-guess',
       data: {
         origin: r.origin || 'unknown',
         match: {
@@ -102,7 +157,8 @@ async function main() {
           category: r.category,
           type: r.type,
           similarity: Number(r.similarity),
-          confident: String(r.confident).toLowerCase() === 'true',
+          method: r.method || '',
+          confident,
           dupGroup: Number(r.dup_group),
           matchedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
@@ -110,13 +166,18 @@ async function main() {
     })
   }
 
-  console.log(`CSV ${rows.length}行 / スロット一致 ${updates.length} / 対応プリセットなし ${missing}`)
+  console.log(
+    `CSV ${rows.length}行 / 一致 ${updates.length}（うちクリア ${cleared}） / 未同定スキップ ${skipped} / 対応プリセットなし ${missing}`,
+  )
+  if (confidentOnly) console.log('モード: confident のみ反映' + (values.reset ? '＋未同定はクリア' : ''))
   if (!updates.length) process.exit(0)
 
   if (!values.apply) {
-    console.log('\n[DRY RUN] 書き込みません。--apply で反映します。先頭10件の反映内容:')
+    console.log('\n[DRY RUN] 書き込みません。--apply で反映します。先頭10件:')
     updates.slice(0, 10).forEach((u) =>
-      console.log(`  ${u.slotId} → preset ${u.presetId}: origin=${u.data.origin}, name=${u.data.match.name}, note=${u.data.match.note}, conf=${u.data.match.confident}`),
+      u.kind === 'clear'
+        ? console.log(`  ${u.slotId} → preset ${u.presetId}: [クリア] origin=unknown`)
+        : console.log(`  ${u.slotId} → preset ${u.presetId}: origin=${u.data.origin}, name=${u.data.match.name}, ${u.kind}`),
     )
     process.exit(0)
   }

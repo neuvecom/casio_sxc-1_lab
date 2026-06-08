@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   CATEGORIES,
-  ORIGINS,
   GROUPS,
   COLORS,
   colorHex,
@@ -36,7 +35,6 @@ function TrashIcon() {
 const EMPTY_FORM = {
   name: '',
   category: 'Other',
-  origin: 'unknown',
   group: '',
   color: '',
   isPreset: true,
@@ -127,7 +125,6 @@ export default function Admin() {
     setForm({
       name: p.name || '',
       category: p.category || 'Other',
-      origin: p.origin || 'unknown',
       group: p.group ?? '',
       color: p.color || '',
       isPreset: p.isPreset !== false,
@@ -186,14 +183,6 @@ export default function Admin() {
             <select className={inputClass} value={form.category} onChange={update('category')}>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            由来
-            <select className={inputClass} value={form.origin} onChange={update('origin')}>
-              {ORIGINS.map((o) => (
-                <option key={o} value={o}>{o}</option>
               ))}
             </select>
           </label>
@@ -345,7 +334,6 @@ export default function Admin() {
                   <th className="px-3 py-2">音色名</th>
                   <th className="px-3 py-2">カテゴリ</th>
                   <th className="px-3 py-2">グループ</th>
-                  <th className="px-3 py-2">由来</th>
                   <th className="px-3 py-2">種別</th>
                   <th className="px-3 py-2">BPM</th>
                   <th className="px-3 py-2">既定</th>
@@ -370,7 +358,6 @@ export default function Admin() {
                     </td>
                     <td className="px-3 py-2 text-slate-300">{p.category}</td>
                     <td className="px-3 py-2 text-slate-300">{p.group || '—'}</td>
-                    <td className="px-3 py-2 text-slate-300">{p.origin}</td>
                     <td className="px-3 py-2 text-slate-400">
                       {[
                         p.isPreset !== false && 'P',

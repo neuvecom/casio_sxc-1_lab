@@ -69,7 +69,7 @@ export default function Presets() {
     return presets.filter((p) => {
       if (favOnly && !meta[p.id]?.favorite) return false
       if (!q) return true
-      const hay = [p.name, p.category, p.origin, p.description, ...(p.tags || [])]
+      const hay = [p.name, p.category, p.group, p.description, ...(p.tags || [])]
         .join(' ')
         .toLowerCase()
       return hay.includes(q)
@@ -142,9 +142,6 @@ export default function Presets() {
                       <span className="rounded bg-slate-800 px-1.5 py-0.5">{p.category}</span>
                       {p.group != null && (
                         <span className="rounded bg-slate-800 px-1.5 py-0.5">G{p.group}</span>
-                      )}
-                      {p.origin && p.origin !== 'unknown' && (
-                        <span className="rounded bg-slate-800 px-1.5 py-0.5">{p.origin}</span>
                       )}
                       {p.oneShot && <span className="rounded bg-slate-800 px-1.5 py-0.5">ワンショット</span>}
                       {p.loop && <span className="rounded bg-slate-800 px-1.5 py-0.5">ループ</span>}
