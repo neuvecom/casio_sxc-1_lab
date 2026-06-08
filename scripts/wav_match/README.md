@@ -95,11 +95,20 @@ python scripts/wav_match/match.py \
 | `note` | 音程（例 C-3） |
 | `category` | 購入の親カテゴリ |
 | `type` | one_shot / loop |
-| `similarity` | 類似度(0〜1)。高いほど一致 |
-| `confident` | しきい値以上なら True（自動確定の目安） |
+| `similarity` | 類似度(0〜1)。exact は 1.0、xcorr は波形相関値 |
+| `method` | `exact`（完全一致）/ `xcorr`（波形相関）/ `mfcc` |
+| `confident` | exact もしくはしきい値以上なら True |
 | `dup_group` | 本体内の重複クラスタID（同IDは同一音の可能性） |
 
 行は bank → pad 順に並ぶので、そのままスロット単位で確認・取り込みしやすい。
+
+## 照合の流れ（3段階）
+
+1. **完全一致（exact）**: PCMサンプル（int16・ネイティブSR）の内容ハッシュで一致を探す。
+   本体と購入が**同一録音・同一フォーマット**なら即確定（画像の完全重複検出と同じ）。`--no-exact` で無効化。
+2. **波形相関（xcorr）**: 完全一致しなかったものだけ、MFCCで候補を絞り波形相互相関で最良を選ぶ。
+   SR違い・トリム・正規化などで完全一致しない「同じ音」を拾う。
+3. （`--no-refine` 指定時）**MFCC のみ**で最近傍（高速・低精度）。
 
 ## 運用の流れ（想定）
 

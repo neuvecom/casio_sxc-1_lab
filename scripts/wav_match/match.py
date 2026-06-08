@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import re
 import sys
 from pathlib import Path
@@ -28,6 +29,11 @@ try:
     import librosa
 except ImportError:
     sys.exit("librosa が必要です: pip install librosa soundfile numpy")
+
+try:
+    import soundfile as sf
+except ImportError:
+    sf = None
 
 ORIGIN_PATTERNS = [
     (re.compile(r"sk[\-_ ]?1", re.I), "SK-1"),
@@ -68,6 +74,18 @@ def embed(path: Path, sr: int, n_mfcc: int):
     vec = np.concatenate([mfcc.mean(axis=1), mfcc.std(axis=1)])
     norm = np.linalg.norm(vec)
     return vec / norm if norm > 0 else vec
+
+
+def content_key(path: Path):
+    """PCMサンプル（int16・ネイティブSR）の内容ハッシュ。完全一致検出用。
+    同一録音・同一フォーマットなら一致する（画像の完全重複検出と同じ考え方）。"""
+    if sf is None:
+        return None
+    try:
+        data, sr = sf.read(str(path), dtype="int16", always_2d=True)
+    except Exception:  # noqa: BLE001
+        return None
+    return (sr, data.shape[1], hashlib.sha1(data.tobytes()).hexdigest())
 
 
 def load_signal(path: Path, sr: int, max_sec: float):
@@ -188,6 +206,8 @@ def main() -> None:
     ap.add_argument("--dup-threshold", type=float, default=0.985)
     ap.add_argument("--bank-offset", type=int, default=0,
                     help="本体が0始まり(bank00=Bank1)なら 1 を指定")
+    ap.add_argument("--no-exact", action="store_true",
+                    help="PCM内容ハッシュによる完全一致照合を行わない")
     ap.add_argument("--no-refine", action="store_true",
                     help="波形相互相関での精緻化を行わず MFCC のみで照合（高速・低精度）")
     ap.add_argument("--topk", type=int, default=20,
@@ -209,27 +229,53 @@ def main() -> None:
     sim = dev_mat @ ref_mat.T  # MFCC コサイン類似度（候補絞り込み・カバレッジ用）
     dup = duplicate_groups(dev_mat, args.dup_threshold)
 
-    # 照合: MFCCで上位候補に絞り、波形の相互相関で最良を選ぶ（既定）
-    if args.no_refine:
-        best = sim.argmax(axis=1)
-        best_sim = sim.max(axis=1)
-    else:
-        print("波形相関で精緻化中…（MFCC上位候補を波形照合）")
-        dev_sig = [load_signal(p, args.refine_sr, args.refine_seconds) for p in dev_paths]
-        ref_cache: dict[int, np.ndarray] = {}
-        best = np.empty(len(dev_paths), dtype=int)
-        best_sim = np.empty(len(dev_paths))
-        for i in range(len(dev_paths)):
-            cand = np.argsort(sim[i])[::-1][: args.topk]
-            bi, bs = int(cand[0]), -1.0
-            for j in cand:
-                j = int(j)
-                if j not in ref_cache:
-                    ref_cache[j] = load_signal(ref_paths[j], args.refine_sr, args.refine_seconds)
-                sc = ncc(dev_sig[i], ref_cache[j])
-                if sc > bs:
-                    bs, bi = sc, j
-            best[i], best_sim[i] = bi, bs
+    ndev = len(dev_paths)
+    best = np.full(ndev, -1, dtype=int)
+    best_sim = np.zeros(ndev)
+    method = [""] * ndev
+    todo = list(range(ndev))  # まだ確定していない本体インデックス
+
+    # ① 完全一致（PCM内容ハッシュ）— 同一録音なら即確定
+    if not args.no_exact and sf is not None:
+        print("完全一致を照合中（PCM内容ハッシュ）…")
+        ref_keys = {}
+        for j, p in enumerate(ref_paths):
+            k = content_key(p)
+            if k is not None:
+                ref_keys.setdefault(k, j)
+        remaining = []
+        for i in todo:
+            k = content_key(dev_paths[i])
+            j = ref_keys.get(k) if k is not None else None
+            if j is not None:
+                best[i], best_sim[i], method[i] = j, 1.0, "exact"
+            else:
+                remaining.append(i)
+        todo = remaining
+        print(f"  完全一致: {ndev - len(todo)} / {ndev}")
+
+    # ② 残りを照合: MFCCで上位候補に絞り、波形相互相関で最良を選ぶ
+    if todo:
+        if args.no_refine:
+            for i in todo:
+                best[i] = int(sim[i].argmax())
+                best_sim[i] = float(sim[i].max())
+                method[i] = "mfcc"
+        else:
+            print(f"波形相関で精緻化中…（残り {len(todo)} 件）")
+            ref_cache: dict[int, np.ndarray] = {}
+            for i in todo:
+                dsig = load_signal(dev_paths[i], args.refine_sr, args.refine_seconds)
+                cand = np.argsort(sim[i])[::-1][: args.topk]
+                bi, bs = int(cand[0]), -1.0
+                for j in cand:
+                    j = int(j)
+                    if j not in ref_cache:
+                        ref_cache[j] = load_signal(ref_paths[j], args.refine_sr, args.refine_seconds)
+                    sc = ncc(dsig, ref_cache[j])
+                    if sc > bs:
+                        bs, bi = sc, j
+                best[i], best_sim[i], method[i] = bi, bs, "xcorr"
 
     rows = []
     for i, p in enumerate(dev_paths):
@@ -247,7 +293,8 @@ def main() -> None:
             "category": m["category"],
             "type": m["type"],
             "similarity": round(float(best_sim[i]), 4),
-            "confident": bool(best_sim[i] >= args.threshold),
+            "method": method[i],
+            "confident": bool(method[i] == "exact" or best_sim[i] >= args.threshold),
             "dup_group": dup[i],
         })
     rows.sort(key=lambda r: (r["bank"] or 999, r["pad"] or 999))
@@ -259,7 +306,10 @@ def main() -> None:
 
     confident = sum(r["confident"] for r in rows)
     n_groups = len(set(dup))
+    n_exact = sum(1 for r in rows if r["method"] == "exact")
+    n_xcorr = sum(1 for r in rows if r["method"] == "xcorr")
     print(f"\n完了: {args.out}")
+    print(f"  完全一致(exact): {n_exact} / 波形相関(xcorr): {n_xcorr}")
     print(f"  自動確定(confident): {confident}/{len(rows)}")
     print(f"  本体内の重複クラスタ数: {n_groups}（{len(dev_paths)} 音 → {n_groups} 種の可能性）")
 

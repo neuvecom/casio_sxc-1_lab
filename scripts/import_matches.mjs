@@ -102,6 +102,7 @@ async function main() {
           category: r.category,
           type: r.type,
           similarity: Number(r.similarity),
+          method: r.method || '',
           confident: String(r.confident).toLowerCase() === 'true',
           dupGroup: Number(r.dup_group),
           matchedAt: admin.firestore.FieldValue.serverTimestamp(),
