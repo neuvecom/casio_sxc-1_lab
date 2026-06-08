@@ -104,3 +104,21 @@ node scripts/setAdmin.mjs <管理者のUID>
    画面に「管理」メニューと `/admin` ページが現れる。
 
 > サービスアカウント鍵は機密情報です。リポジトリに**絶対にコミットしない**でください。
+
+## 9. メール確認（email verification）
+
+メール/パスワード登録時に、本人確認メールを自動送信します（無料・Firebase標準機能）。
+
+- 送信自体はアプリ側で実装済み（登録時に `sendEmailVerification`、未確認なら画面上部に再送バナー）。
+- コンソール設定（任意）:
+  1. Authentication → Templates →「メールアドレスの確認」でテンプレ文面・送信者名を調整。
+  2. Authentication → Settings → 承認済みドメインに本番ドメイン（`sxc-1-lab.web.app`）が
+     含まれていることを確認（Hosting利用時は自動で入っていることが多い）。
+- ※独自ドメインからの送信や到達率向上が必要になったら、カスタムSMTP（Blaze＋外部送信）を検討。
+
+## 10. フィードバック機能
+
+- ログインユーザーが `/feedback` から要望・不具合を送信 → Firestore `feedback` に保存。
+- 管理者は `/admin/feedback` で閲覧・対応状態の切替が可能。
+- セキュリティルール（`firestore.rules`）で「作成は本人のみ・閲覧は管理者のみ」に制限済み。
+  ルール変更後は `firebase deploy --only firestore:rules` で反映すること。

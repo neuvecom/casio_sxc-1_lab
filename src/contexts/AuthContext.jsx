@@ -6,6 +6,7 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   signOut as fbSignOut,
   onAuthStateChanged,
 } from 'firebase/auth'
@@ -55,9 +56,20 @@ export function AuthProvider({ children }) {
     requireConfig()
     return signInWithEmailAndPassword(auth, email, password)
   }
-  const registerWithEmail = (email, password) => {
+  const registerWithEmail = async (email, password) => {
     requireConfig()
-    return createUserWithEmailAndPassword(auth, email, password)
+    const cred = await createUserWithEmailAndPassword(auth, email, password)
+    try {
+      await sendEmailVerification(cred.user) // 確認メールを送信
+    } catch {
+      /* 送信失敗は致命的でないため無視 */
+    }
+    return cred
+  }
+  const resendVerification = () => {
+    requireConfig()
+    if (auth.currentUser) return sendEmailVerification(auth.currentUser)
+    return Promise.resolve()
   }
   const signOut = () => {
     requireConfig()
@@ -72,6 +84,7 @@ export function AuthProvider({ children }) {
     loginWithGoogle,
     loginWithEmail,
     registerWithEmail,
+    resendVerification,
     signOut,
   }
 

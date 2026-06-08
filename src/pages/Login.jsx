@@ -1,6 +1,6 @@
 // ログイン／新規登録ページ（Google・メールアドレス）。
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext.jsx'
 
 export default function Login() {
@@ -105,6 +105,14 @@ export default function Login() {
             {mode === 'login' ? 'アカウントを作成する' : 'ログインに戻る'}
           </button>
         </div>
+
+        <p className="mt-4 text-center text-xs text-slate-500">
+          続行すると
+          <Link to="/terms" className="underline hover:text-slate-300">利用規約</Link>
+          ・
+          <Link to="/privacy" className="underline hover:text-slate-300">プライバシーポリシー</Link>
+          に同意したものとみなされます。
+        </p>
       </div>
     </div>
   )
