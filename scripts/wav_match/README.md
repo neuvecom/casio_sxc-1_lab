@@ -30,17 +30,27 @@ python scripts/wav_match/match.py \
 | `--dup-threshold` | 0.985 | 本体WAV同士がこれ以上似ていたら同一音（重複）とみなす |
 | `--sr` | 22050 | 解析サンプルレート |
 | `--n-mfcc` | 20 | MFCC 次数 |
+| `--bank-offset` | 0 | 本体が0始まり(bank00=Bank1)なら 1 を指定 |
 
 ## データ構造の前提
 
 ```
-本体:  {bank番号}_{bank名}/{pad番号}.wav     例) 01_MyBank/03.wav → Bank1 Pad3
-購入:  {one_shot|loop}/{カテゴリ}/{機種}_{SR}_{音程}_{音色名}.wav
-       例) one_shot/keys/MT-40_48_C-3_Accordion.wav
+本体:  {bank番号}_{bank名}/{pad番号}.wav      例) 01_Preset01/03.wav → Bank1 Pad3
+       （0始まり bank00/.. の場合は --bank-offset 1）
+
+購入:  one shot_tone/{音色}/{機種}_{MIDI番号}_{音名}_{音色名}.wav
+         例) one shot_tone/Brass Ensemble/SK-1_53_F-3_BrassEnsemble.wav
+       one shot_rhythm/{ドラム}/{機種}_{名前}{番号}.wav
+         例) one shot_rhythm/Kick/SK-1_Kick1.wav
+       loop/{リズム}/{機種}_{MIDI番号}_{音名}_{名前}{番号}.wav
+         例) loop/Rock/MT-40_36_C-2_Rock1.wav
 ```
 
 - 本体はパスから **bank/pad が確定** → 結果は該当スロットに直接対応づく。
-- 購入はファイル名から **機種・音程・音色名**、親ディレクトリから **カテゴリ・loop/oneshot** を抽出。
+- 購入はファイル名から **機種・音名・音色名**、パスから **カテゴリ・one_shot/loop** を抽出。
+  - ※2番目の数字は MIDI ノート番号（48=C3, 53=F3…）。音名は `F-3` / `F-sharp-3` 形式。
+  - 音色は MIDI 53〜84 等の全鍵＋変種（`-env12` 等）でサンプリングされており、購入セットは
+    数千ファイル規模。埋め込み計算に数分かかる場合がある。
 
 ## 出力 `matches.csv`
 

@@ -14,6 +14,8 @@
     pip install librosa soundfile numpy
     python match.py --device ./device_wav --reference ./waves_place_wav --out matches.csv
 """
+from __future__ import annotations
+
 import argparse
 import csv
 import re
@@ -33,7 +35,8 @@ ORIGIN_PATTERNS = [
     (re.compile(r"cz[\-_ ]?101", re.I), "CZ-101"),
     (re.compile(r"mt[\-_ ]?40", re.I), "MT-40"),
 ]
-NOTE_RE = re.compile(r"^[A-Ga-g][#b]?-?\d+$")  # 例: C-3, F#2, Ab-1
+# 音名トークン。自然音 C-3 / シャープ F-sharp-3 / フラット A-flat-2 等に対応
+NOTE_RE = re.compile(r"^[A-Ga-g](-sharp|-flat)?-\d+$")
 AUDIO_EXT = {".wav", ".aif", ".aiff", ".flac"}
 
 
@@ -67,24 +70,30 @@ def embed(path: Path, sr: int, n_mfcc: int):
     return vec / norm if norm > 0 else vec
 
 
-def parse_device(path: Path, root: Path):
-    """本体パス → (bank, pad)。{NN}_name/{MM}.wav を想定。"""
+def parse_device(path: Path, root: Path, bank_offset: int = 0):
+    """本体パス → (bank, pad)。{NN}_name/{MM}.wav や bank00/01.wav を想定。
+    bank_offset: 本体が 0 始まり(bank00=Bank1)の場合に 1 を指定。"""
     rel = path.relative_to(root)
     bank = None
     if len(rel.parts) >= 2:
-        m = re.match(r"^(\d+)", rel.parts[0])
-        bank = int(m.group(1)) if m else None
-    pm = re.match(r"^(\d+)", path.stem)
+        m = re.search(r"(\d+)", rel.parts[0])  # ディレクトリ名中の最初の数字
+        bank = int(m.group(1)) + bank_offset if m else None
+    pm = re.search(r"(\d+)", path.stem)
     pad = int(pm.group(1)) if pm else None
     return bank, pad
 
 
 def parse_reference(path: Path, root: Path):
-    """購入パス → 機種/音色名/音程/カテゴリ/種別 を抽出。"""
+    """購入パス → 機種/音色名/音程/カテゴリ/種別 を抽出。
+    例) one shot_tone/Brass Ensemble/SK-1_53_F-3_BrassEnsemble.wav
+        loop/Rock/MT-40_36_C-2_Rock1.wav
+    ファイル名は {機種}_{MIDI番号}_{音名}_{音色名} か {機種}_{ドラム名}。"""
     rel = path.relative_to(root)
     parts_lower = [p.lower() for p in rel.parts]
     is_loop = any("loop" in p for p in parts_lower)
-    is_oneshot = any("one_shot" in p or "oneshot" in p for p in parts_lower)
+    is_oneshot = any(
+        ("one shot" in p) or ("one_shot" in p) or ("oneshot" in p) for p in parts_lower
+    )
     category = rel.parts[-2] if len(rel.parts) >= 2 else ""
 
     tokens = path.stem.split("_")
@@ -149,6 +158,8 @@ def main() -> None:
     ap.add_argument("--n-mfcc", type=int, default=20)
     ap.add_argument("--threshold", type=float, default=0.92)
     ap.add_argument("--dup-threshold", type=float, default=0.985)
+    ap.add_argument("--bank-offset", type=int, default=0,
+                    help="本体が0始まり(bank00=Bank1)なら 1 を指定")
     args = ap.parse_args()
 
     print(f"購入WAV を読み込み中: {args.reference}")
@@ -168,7 +179,7 @@ def main() -> None:
 
     rows = []
     for i, p in enumerate(dev_paths):
-        bank, pad = parse_device(p, args.device)
+        bank, pad = parse_device(p, args.device, args.bank_offset)
         m = ref_meta[best[i]]
         rows.append({
             "bank": bank,
