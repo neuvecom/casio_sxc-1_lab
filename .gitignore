@@ -24,3 +24,15 @@ firebase-debug.log*
 firestore-debug.log*
 serviceAccountKey.json
 *serviceAccount*.json
+
+# WAV照合の作業データ（購入音源・本体DL音源はコミットしない）
+device_wav/
+waves_place_wav/
+scripts/wav_match/*.csv
+matches.csv
+# 念のため：wav_match 配下の音声・小メタは一切コミットしない
+scripts/wav_match/**/*.wav
+scripts/wav_match/**/*.wav.db
+scripts/wav_match/**/*.aif
+scripts/wav_match/**/*.aiff
+scripts/wav_match/**/*.flac
