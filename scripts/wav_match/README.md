@@ -31,6 +31,35 @@ python scripts/wav_match/match.py \
 | `--sr` | 22050 | 解析サンプルレート |
 | `--n-mfcc` | 20 | MFCC 次数 |
 | `--bank-offset` | 0 | 本体が0始まり(bank00=Bank1)なら 1 を指定 |
+| `--coverage` | （無し） | 購入音源の有り/無しカバレッジCSVを出力するパス |
+
+## カバレッジ（購入音源の有り/無し）
+
+`--coverage` を付けると、購入音源側を **音色グループ（機種×種別×カテゴリ）** 単位で集計し、
+本体プリセットに入っているか（有り/無し）を出力する。
+
+```bash
+python scripts/wav_match/match.py \
+  --device scripts/wav_match/device_wav \
+  --reference scripts/wav_match/waves_place_wav \
+  --out scripts/wav_match/matches.csv \
+  --coverage scripts/wav_match/coverage.csv
+```
+
+出力 `coverage.csv`:
+
+| 列 | 内容 |
+| --- | --- |
+| `origin` | 機種（SK-1/MT-40…） |
+| `type` | one_shot / loop |
+| `category` | 音色/ドラム/リズム名（例 Brass Ensemble, Kick, Rock） |
+| `ref_files` | その音色グループの購入ファイル数 |
+| `present` | 本体に有りなら True（しきい値以上で一致する本体パッドがある） |
+| `best_similarity` | そのグループの最良一致類似度 |
+| `device_slots` | 一致した本体スロット（b1-p5 等） |
+
+`present=False` ＝ その元機種サウンドは本体プリセットに**収録されていない**可能性。
+判定は `--threshold` に依存するので、必要に応じて調整する。
 
 ## データ構造の前提
 

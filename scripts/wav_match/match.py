@@ -154,6 +154,8 @@ def main() -> None:
     ap.add_argument("--device", required=True, type=Path)
     ap.add_argument("--reference", required=True, type=Path)
     ap.add_argument("--out", type=Path, default=Path("matches.csv"))
+    ap.add_argument("--coverage", type=Path, default=None,
+                    help="購入音源の有り/無しカバレッジCSVを出力するパス")
     ap.add_argument("--sr", type=int, default=22050)
     ap.add_argument("--n-mfcc", type=int, default=20)
     ap.add_argument("--threshold", type=float, default=0.92)
@@ -208,6 +210,46 @@ def main() -> None:
     print(f"\n完了: {args.out}")
     print(f"  自動確定(confident): {confident}/{len(rows)}")
     print(f"  本体内の重複クラスタ数: {n_groups}（{len(dev_paths)} 音 → {n_groups} 種の可能性）")
+
+    # --- カバレッジ（購入音源の有り/無し）---
+    if args.coverage:
+        dev_slots = []
+        for p in dev_paths:
+            b, pad = parse_device(p, args.device, args.bank_offset)
+            dev_slots.append(f"b{b}-p{pad}" if b and pad else p.name)
+        ref_best = sim.max(axis=0)      # 各購入ファイルに最も近い本体類似度
+        ref_best_dev = sim.argmax(axis=0)
+
+        groups = {}
+        for j in range(len(ref_paths)):
+            m = ref_meta[j]
+            key = (m["origin"], m["type"], m["category"])
+            g = groups.setdefault(key, {"files": 0, "best": 0.0, "slots": set()})
+            g["files"] += 1
+            if ref_best[j] > g["best"]:
+                g["best"] = float(ref_best[j])
+            if ref_best[j] >= args.threshold:
+                g["slots"].add(dev_slots[ref_best_dev[j]])
+
+        cov_rows = []
+        for (origin, type_, category), g in groups.items():
+            cov_rows.append({
+                "origin": origin,
+                "type": type_,
+                "category": category,
+                "ref_files": g["files"],
+                "present": bool(g["best"] >= args.threshold),
+                "best_similarity": round(g["best"], 4),
+                "device_slots": " ".join(sorted(g["slots"])),
+            })
+        cov_rows.sort(key=lambda r: (r["origin"], r["type"], r["category"]))
+        with args.coverage.open("w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=list(cov_rows[0].keys()))
+            w.writeheader()
+            w.writerows(cov_rows)
+        present = sum(r["present"] for r in cov_rows)
+        print(f"\nカバレッジ: {args.coverage}")
+        print(f"  有り {present} / 全 {len(cov_rows)} 音色グループ（無し {len(cov_rows) - present}）")
 
 
 if __name__ == "__main__":
