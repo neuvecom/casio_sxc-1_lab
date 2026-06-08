@@ -26,5 +26,11 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+
+    // フィードバック：ログインユーザーが自分名義で作成のみ。閲覧・更新は管理者だけ
+    match /feedback/{id} {
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow read, update, delete: if isAdmin();
+    }
   }
 }

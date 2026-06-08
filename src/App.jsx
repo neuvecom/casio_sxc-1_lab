@@ -7,7 +7,9 @@ import Login from './pages/Login.jsx'
 import MyPage from './pages/MyPage.jsx'
 import BankGrid from './pages/BankGrid.jsx'
 import Presets from './pages/Presets.jsx'
+import Feedback from './pages/Feedback.jsx'
 import Admin from './pages/Admin.jsx'
+import AdminFeedback from './pages/AdminFeedback.jsx'
 
 export default function App() {
   return (
@@ -44,11 +46,31 @@ export default function App() {
         }
       />
       <Route
+        path="/feedback"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Feedback />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin"
         element={
           <AdminRoute>
             <Layout>
               <Admin />
+            </Layout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/feedback"
+        element={
+          <AdminRoute>
+            <Layout>
+              <AdminFeedback />
             </Layout>
           </AdminRoute>
         }

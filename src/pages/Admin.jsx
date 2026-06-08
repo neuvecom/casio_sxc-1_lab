@@ -1,6 +1,7 @@
 // 管理者ページ（フェーズ0）：プリセットの登録・編集・削除。
 // 実機を鳴らしながら音色を採取して登録する想定。
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   CATEGORIES,
   GROUPS,
@@ -154,7 +155,12 @@ export default function Admin() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold">管理者ページ — プリセット登録</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">管理者ページ — プリセット登録</h1>
+        <Link to="/admin/feedback" className="text-sm text-emerald-400 hover:underline">
+          フィードバック一覧 →
+        </Link>
+      </div>
       <p className="mt-1 text-sm text-slate-400">
         実機を鳴らしながら音色を採取して登録します。
       </p>
