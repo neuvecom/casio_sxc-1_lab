@@ -66,6 +66,33 @@ updatedAt: timestamp
 - 空き状況ビジュアライズは本コレクションを 80×16 grid に描画。
 - ドキュメント未作成＝空きスロットとして扱えば書き込み量を節約可能 ※要検討。
 
+### `defaultSlots/{slotId}` — 新規ユーザーの初期配置（共通 / 管理者が保存）
+管理者が自分の `users/{adminUid}/slots` で組んだ配置を「現在の配置をデフォルトに保存」
+ボタンでスナップショットしたもの。`slotId` と各フィールドは `users/{uid}/slots` と同形。
+```
+bank: number
+pad: number
+type: "preset" | "sample"   # 空き（empty）は保存しない
+presetId: string|null
+sampleName: string|null
+memo: string
+updatedAt: timestamp
+```
+- **初回ログイン時のコピー**: 新規ユーザーは `users/{uid}` プロフィールが未作成のとき
+  「初回」と判定し、`defaultSlots` 全件を自分の `users/{uid}/slots` へコピーしてから
+  プロフィールを作成する（`src/lib/users.js` の `ensureUserInitialized`）。冪等で、
+  2回目以降のログインでは何もしない。
+- 保存は「全置換」: 現在配置に無い既存デフォルトは削除し、使用中スロットのみ書き込む
+  （`src/lib/defaultSlots.js` の `saveDefaultSlots`）。
+
+### `users/{uid}` — プロフィール（個別 / 初回ログインで作成）
+```
+displayName: string
+createdAt: timestamp
+seededSlotCount: number   # 初回にデフォルトからコピーしたスロット数の記録
+```
+- ドキュメントの存在を「初回ログイン済みフラグ」として利用する。
+
 ### `users/{uid}/userPresetMeta/{presetId}` — プリセットへの個別メモ・評価（個別）
 ```
 rating: number|null     # 1〜5（集計の元データ）
@@ -88,6 +115,9 @@ updatedAt: timestamp
   - 読み取り: ログインユーザー（公開ランキングを未ログインにも見せるなら一部緩和）※要検討
   - 作成・更新・削除: **管理者のみ**（`request.auth.token.admin == true`）
   - 集計フィールドはクライアント直書き禁止 → Cloud Functions のみ更新
+- `defaultSlots/**`:
+  - 読み取り: ログインユーザー（新規ユーザーが初回コピーするため）
+  - 作成・更新・削除: **管理者のみ**
 - 集計用の Cloud Functions は Admin SDK 権限で `presets` を更新。
 
 ## 未確定・要検討事項
