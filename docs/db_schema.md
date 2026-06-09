@@ -93,8 +93,22 @@ updatedAt: timestamp
 displayName: string
 createdAt: timestamp
 seededSlotCount: number   # 初回にデフォルトからコピーしたスロット数の記録
+defaultsVersion: number   # 確認（取り込み or 見送り）済みのデフォルト配置バージョン
 ```
 - ドキュメントの存在を「初回ログイン済みフラグ」として利用する。
+- `defaultsVersion` を `meta/defaultSlots.version` と比較し、`meta` の方が新しければ
+  バンク配置画面で「更新あり」バナーを表示する。
+
+### `meta/defaultSlots` — デフォルト配置の更新メタ（共通 / 管理者が更新）
+```
+version: number      # 保存のたびに +1（更新通知の判定に使う）
+slotCount: number    # 公開中デフォルトの使用中スロット数
+updatedAt: timestamp
+```
+- 管理者が「現在の配置をデフォルトに保存」すると `defaultSlots` 更新と同時に
+  `version` を +1。各ユーザーは自分の `defaultsVersion` より新しければ通知を受け、
+  **空きスロットだけ**デフォルトを取り込める（`fillEmptySlotsFromDefaults`）。
+- 取り込み／見送りのいずれでも `defaultsVersion` を最新に更新し、以後は通知しない。
 
 ### `users/{uid}/userPresetMeta/{presetId}` — プリセットへの個別メモ・評価（個別）
 ```
@@ -120,6 +134,9 @@ updatedAt: timestamp
   - 集計フィールドはクライアント直書き禁止 → Cloud Functions のみ更新
 - `defaultSlots/**`:
   - 読み取り: ログインユーザー（新規ユーザーが初回コピーするため）
+  - 作成・更新・削除: **管理者のみ**
+- `meta/**`:
+  - 読み取り: ログインユーザー（更新通知の判定にバージョンを読む）
   - 作成・更新・削除: **管理者のみ**
 - 集計用の Cloud Functions は Admin SDK 権限で `presets` を更新。
 

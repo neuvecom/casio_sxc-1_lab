@@ -5,8 +5,12 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
+  setDoc,
   writeBatch,
+  onSnapshot,
+  increment,
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './firebase.js'
@@ -16,6 +20,27 @@ const BATCH_LIMIT = 450
 
 function defaultSlotsCol() {
   return collection(db, 'defaultSlots')
+}
+
+// デフォルト配置の更新を表すメタ情報。保存のたびに version を +1 して、
+// ユーザー側の取り込み済みバージョンと比較し「更新あり」を判定する。
+function metaRef() {
+  return doc(db, 'meta', 'defaultSlots')
+}
+
+// メタ情報を購読（{ version, slotCount, updatedAt } または null）。
+export function subscribeDefaultsMeta(onChange, onError) {
+  return onSnapshot(
+    metaRef(),
+    (snap) => onChange(snap.exists() ? snap.data() : null),
+    onError,
+  )
+}
+
+// 現在のデフォルト配置のバージョンを取得（未保存なら 0）。
+export async function currentDefaultsVersion() {
+  const snap = await getDoc(metaRef())
+  return snap.exists() ? snap.data().version ?? 0 : 0
 }
 
 // スロットデータから保存用フィールドを正規化（slots.js の setSlot と同じ形）。
@@ -70,6 +95,18 @@ export async function saveDefaultSlots(slotsMap) {
   }
 
   await commitInChunks(ops)
+
+  // メタのバージョンを +1 して「更新あり」を各ユーザーへ知らせる
+  await setDoc(
+    metaRef(),
+    {
+      version: increment(1),
+      slotCount: currentIds.size,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  )
+
   return currentIds.size
 }
 

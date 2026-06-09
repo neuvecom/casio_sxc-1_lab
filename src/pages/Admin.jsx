@@ -14,7 +14,7 @@ import {
 } from '../lib/presets.js'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { subscribeSlots } from '../lib/slots.js'
-import { saveDefaultSlots } from '../lib/defaultSlots.js'
+import { saveDefaultSlots, subscribeDefaultsMeta } from '../lib/defaultSlots.js'
 
 // 登録済み一覧のバンク切り替えタブ（プリセットは B1〜B14）
 const PRESET_BANK_MAX = 14
@@ -65,6 +65,7 @@ export default function Admin() {
   const [mySlots, setMySlots] = useState({})
   const [savingDefault, setSavingDefault] = useState(false)
   const [defaultMsg, setDefaultMsg] = useState('')
+  const [defaultsMeta, setDefaultsMeta] = useState(null) // 公開中のデフォルト { version, slotCount, updatedAt }
 
   // バンクごとの件数
   const counts = useMemo(() => {
@@ -114,6 +115,12 @@ export default function Admin() {
     return unsub
   }, [user])
 
+  // 公開中のデフォルト配置メタ（バージョン・更新日時）を購読
+  useEffect(() => {
+    const unsub = subscribeDefaultsMeta(setDefaultsMeta, () => {})
+    return unsub
+  }, [])
+
   // 使用中（空きでない）スロット数
   const usedSlotCount = useMemo(
     () => Object.values(mySlots).filter((s) => s?.type && s.type !== 'empty').length,
@@ -132,7 +139,10 @@ export default function Admin() {
     setSavingDefault(true)
     try {
       const count = await saveDefaultSlots(mySlots)
-      setDefaultMsg(`デフォルト配置を保存しました（${count} スロット）。`)
+      setDefaultMsg(
+        `デフォルト配置を保存しました（${count} スロット）。` +
+          '各ユーザーは次回のバンク配置画面で取り込み通知を受け取ります。',
+      )
     } catch (err) {
       setError(`デフォルト配置の保存に失敗しました：${err.message}`)
     } finally {
@@ -223,9 +233,17 @@ export default function Admin() {
                 バンク配置
               </Link>
               で組んだあなたの現在の配置を保存すると、新規ユーザーの初回ログイン時に
-              コピーされ初期プリセットとして入ります。現在の使用中スロット：
+              コピーされ初期プリセットとして入ります。既存ユーザーには取り込み通知が届きます。
+              現在の使用中スロット：
               <span className="font-semibold text-slate-200">{usedSlotCount}</span>
             </p>
+            {defaultsMeta && (defaultsMeta.version ?? 0) > 0 && (
+              <p className="mt-1 text-xs text-slate-500">
+                公開中のデフォルト：v{defaultsMeta.version}（{defaultsMeta.slotCount} スロット）
+                {defaultsMeta.updatedAt?.toDate &&
+                  ` / 更新 ${defaultsMeta.updatedAt.toDate().toLocaleString('ja-JP')}`}
+              </p>
+            )}
           </div>
           <button
             type="button"
