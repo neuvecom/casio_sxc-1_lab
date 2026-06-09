@@ -4,7 +4,7 @@ import Layout from './components/Layout.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import AdminRoute from './components/AdminRoute.jsx'
 import Login from './pages/Login.jsx'
-import MyPage from './pages/MyPage.jsx'
+import Home from './pages/Home.jsx'
 import BankGrid from './pages/BankGrid.jsx'
 import Presets from './pages/Presets.jsx'
 import Feedback from './pages/Feedback.jsx'
@@ -19,16 +19,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/privacy" element={<Layout><Privacy /></Layout>} />
       <Route path="/terms" element={<Layout><Terms /></Layout>} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <MyPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/" element={<Layout><Home /></Layout>} />
       <Route
         path="/banks"
         element={

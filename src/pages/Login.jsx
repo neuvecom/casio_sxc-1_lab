@@ -1,12 +1,15 @@
 // ログイン／新規登録ページ（Google・メールアドレス）。
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext.jsx'
 
 export default function Login() {
   const { loginWithGoogle, loginWithEmail, registerWithEmail, isFirebaseConfigured } = useAuth()
   const navigate = useNavigate()
-  const [mode, setMode] = useState('login') // 'login' | 'register'
+  const [searchParams] = useSearchParams()
+  const [mode, setMode] = useState(
+    searchParams.get('mode') === 'register' ? 'register' : 'login',
+  ) // 'login' | 'register'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')

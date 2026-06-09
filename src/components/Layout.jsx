@@ -35,10 +35,10 @@ export default function Layout({ children }) {
             SXC-1 <span className="text-emerald-400">Lab</span>
           </Link>
           <nav className="flex items-center gap-1">
-            {user && (
+            {user ? (
               <>
                 <NavLink to="/" end className={navClass}>
-                  マイページ
+                  ホーム
                 </NavLink>
                 <NavLink to="/banks" className={navClass}>
                   バンク
@@ -61,6 +61,21 @@ export default function Layout({ children }) {
                   ログアウト
                 </button>
               </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-800"
+                >
+                  ログイン
+                </Link>
+                <Link
+                  to="/login?mode=register"
+                  className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+                >
+                  新規登録
+                </Link>
+              </>
             )}
           </nav>
         </div>
@@ -81,11 +96,16 @@ export default function Layout({ children }) {
       )}
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
       <footer className="border-t border-slate-800 bg-slate-950">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-4 text-xs text-slate-500">
-          <span>SXC-1 Lab（運営: ヘボ談）</span>
-          <Link to="/privacy" className="hover:text-slate-300">プライバシーポリシー</Link>
-          <Link to="/terms" className="hover:text-slate-300">利用規約</Link>
-          <a href="mailto:tsunomegane@gmail.com" className="hover:text-slate-300">お問い合わせ</a>
+        <div className="mx-auto max-w-5xl px-4 py-4 text-center text-xs text-slate-500">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <span>SXC-1 Lab（運営: ヘボ談）</span>
+            <Link to="/privacy" className="hover:text-slate-300">プライバシーポリシー</Link>
+            <Link to="/terms" className="hover:text-slate-300">利用規約</Link>
+            <a href="mailto:tsunomegane@gmail.com" className="hover:text-slate-300">お問い合わせ</a>
+          </div>
+          <p className="mt-2 text-slate-600">
+            当サイトは Amazon アソシエイト・プログラムの参加者です。
+          </p>
         </div>
       </footer>
     </div>

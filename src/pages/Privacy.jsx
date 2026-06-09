@@ -63,14 +63,22 @@ export default function Privacy() {
         </p>
       </Section>
 
-      <Section title="7. お問い合わせ窓口">
+      <Section title="7. アフィリエイトプログラムについて">
+        <p>
+          本サービスは Amazon アソシエイト・プログラムの参加者です。本サービス内のリンクを
+          経由して商品が購入された場合、運営者が紹介料を得ることがあります。リンク先における
+          情報の取扱いは、各事業者のプライバシーポリシーに従います。
+        </p>
+      </Section>
+
+      <Section title="8. お問い合わせ窓口">
         <p>
           運営者: ヘボ談<br />
           メール: <a className="text-emerald-400 underline" href="mailto:tsunomegane@gmail.com">tsunomegane@gmail.com</a>
         </p>
       </Section>
 
-      <Section title="8. 本ポリシーの変更">
+      <Section title="9. 本ポリシーの変更">
         <p>
           本ポリシーは、必要に応じて変更することがあります。重要な変更がある場合は本サービス上で
           お知らせします。
