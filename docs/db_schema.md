@@ -82,6 +82,9 @@ updatedAt: timestamp
   「初回」と判定し、`defaultSlots` 全件を自分の `users/{uid}/slots` へコピーしてから
   プロフィールを作成する（`src/lib/users.js` の `ensureUserInitialized`）。冪等で、
   2回目以降のログインでは何もしない。
+- **既存会員の保護**: プロフィール導入前から登録している会員はプロフィールが無いが、
+  すでにスロットを持っていればコピーをスキップし（配置を上書きしない）、プロフィールの
+  作成のみ行う（`seededSlotCount: 0`）。コピーするのはスロットが0件のときだけ。
 - 保存は「全置換」: 現在配置に無い既存デフォルトは削除し、使用中スロットのみ書き込む
   （`src/lib/defaultSlots.js` の `saveDefaultSlots`）。
 

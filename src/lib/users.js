@@ -2,16 +2,26 @@
 // 新規ユーザーの初回ログイン時に、プロフィールを作成しつつ
 // 管理者が保存したデフォルト配置（defaultSlots）を各自のスロットへコピーする。
 import {
+  collection,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   writeBatch,
+  query,
+  limit,
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './firebase.js'
 import { fetchDefaultSlots } from './defaultSlots.js'
 
 const BATCH_LIMIT = 450
+
+// 既にスロットを1件でも持っているか（読み取り1回で判定）。
+async function userHasAnySlot(uid) {
+  const snap = await getDocs(query(collection(db, 'users', uid, 'slots'), limit(1)))
+  return !snap.empty
+}
 
 // デフォルト配置を自分のスロットへコピーする。返り値はコピーした件数。
 async function seedSlotsFromDefaults(uid) {
@@ -47,9 +57,14 @@ export async function ensureUserInitialized(user) {
   const snap = await getDoc(profileRef)
   if (snap.exists()) return false // 初回ではない
 
+  // プロフィール未作成。ただしプロフィール導入前から登録している既存会員が
+  // すでにスロットを持っている場合は、その配置を上書きしないようコピーしない。
+  // （新規ユーザー＝スロット0件のときだけデフォルトをコピーする）
   let seededSlotCount = 0
   try {
-    seededSlotCount = await seedSlotsFromDefaults(user.uid)
+    if (!(await userHasAnySlot(user.uid))) {
+      seededSlotCount = await seedSlotsFromDefaults(user.uid)
+    }
   } catch {
     // デフォルト配置のコピー失敗はログインを妨げない（後から手動配置も可能）
   }
@@ -57,7 +72,7 @@ export async function ensureUserInitialized(user) {
   await setDoc(profileRef, {
     displayName: user.displayName || '',
     createdAt: serverTimestamp(),
-    seededSlotCount, // デフォルトから何件コピーしたかの記録
+    seededSlotCount, // デフォルトから何件コピーしたかの記録（既存会員は 0）
   })
   return true
 }
