@@ -11,6 +11,7 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth'
 import { auth, isFirebaseConfigured } from '../lib/firebase.js'
+import { ensureUserInitialized } from '../lib/users.js'
 
 const AuthContext = createContext(null)
 
@@ -34,6 +35,9 @@ export function AuthProvider({ children }) {
         } catch {
           setIsAdmin(false)
         }
+        // 初回ログインならプロフィール作成＋デフォルト配置のコピー（冪等・非同期）。
+        // UI 表示を妨げないよう待たず、失敗してもログインは継続する。
+        ensureUserInitialized(u).catch(() => {})
       } else {
         setIsAdmin(false)
       }

@@ -27,6 +27,21 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // デフォルト配置：管理者が「現在の配置」を保存し、
+    // 新規ユーザーが初回ログイン時にコピーするため読み取りはログインユーザーに許可。
+    // 作成・更新・削除は管理者のみ。
+    match /defaultSlots/{slotId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // メタ情報（デフォルト配置の更新バージョン等）。読み取りはログインユーザー、
+    // 書き込みは管理者のみ。クライアントは更新通知の判定にバージョンを読む。
+    match /meta/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // フィードバック：ログインユーザーが自分名義で作成のみ。閲覧・更新は管理者だけ
     match /feedback/{id} {
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;

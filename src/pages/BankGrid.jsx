@@ -6,6 +6,12 @@ import { useAuth } from '../contexts/AuthContext.jsx'
 import { BANK_COUNT, PAD_COUNT, SLOT_COUNT, slotId } from '../lib/banks.js'
 import { subscribeSlots, setSlot } from '../lib/slots.js'
 import { subscribePresets, colorHex } from '../lib/presets.js'
+import { subscribeDefaultsMeta } from '../lib/defaultSlots.js'
+import {
+  subscribeUserProfile,
+  fillEmptySlotsFromDefaults,
+  markDefaultsVersion,
+} from '../lib/users.js'
 import SlotModal from '../components/SlotModal.jsx'
 
 const TYPE_STYLE = {
@@ -36,6 +42,13 @@ export default function BankGrid() {
   const [editing, setEditing] = useState(null) // { bank, pad } | null
   const [tip, setTip] = useState(null) // { x, y, title, body }
 
+  // デフォルト配置の「更新あり」通知用
+  const [defaultsMeta, setDefaultsMeta] = useState(null) // { version, slotCount, updatedAt }
+  const [profile, setProfile] = useState(null) // { defaultsVersion, ... }
+  const [bannerDismissed, setBannerDismissed] = useState(false) // 今回だけ閉じる
+  const [importing, setImporting] = useState(false)
+  const [importMsg, setImportMsg] = useState('')
+
   // 自分のスロットを購読
   useEffect(() => {
     if (!user) return
@@ -61,6 +74,63 @@ export default function BankGrid() {
     )
     return unsub
   }, [])
+
+  // デフォルト配置のメタ（更新バージョン）を購読
+  useEffect(() => {
+    const unsub = subscribeDefaultsMeta(setDefaultsMeta, () => {})
+    return unsub
+  }, [])
+
+  // 自分のプロフィール（確認済みデフォルトバージョン）を購読
+  useEffect(() => {
+    if (!user) return
+    const unsub = subscribeUserProfile(user.uid, setProfile, () => {})
+    return unsub
+  }, [user])
+
+  // 管理者がデフォルトを更新し、まだ自分が取り込んでいなければ通知を出す
+  const showDefaultsBanner =
+    !bannerDismissed &&
+    !!defaultsMeta &&
+    (defaultsMeta.version ?? 0) > (profile?.defaultsVersion ?? 0) &&
+    (defaultsMeta.slotCount ?? 0) > 0
+
+  // 空きスロットだけデフォルトを取り込む
+  const handleImportDefaults = async () => {
+    if (!user || !defaultsMeta) return
+    setImporting(true)
+    setImportMsg('')
+    try {
+      const existingIds = new Set(
+        Object.entries(slots)
+          .filter(([, s]) => s?.type && s.type !== 'empty')
+          .map(([id]) => id),
+      )
+      const added = await fillEmptySlotsFromDefaults(user.uid, existingIds)
+      await markDefaultsVersion(user.uid, defaultsMeta.version ?? 0)
+      setImportMsg(
+        added > 0
+          ? `空いていた ${added} スロットにデフォルトを取り込みました。`
+          : '空きスロットがなかったため、取り込みはありませんでした。',
+      )
+    } catch (e) {
+      setError(`取り込みに失敗しました：${e.message}`)
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  // 「あとで」：確認済みにして以後は通知しない
+  const handleDismissDefaults = async () => {
+    setBannerDismissed(true)
+    if (user && defaultsMeta) {
+      try {
+        await markDefaultsVersion(user.uid, defaultsMeta.version ?? 0)
+      } catch {
+        /* 見送りの記録失敗は致命的でないため無視 */
+      }
+    }
+  }
 
   const presetsById = useMemo(
     () => Object.fromEntries(presets.map((p) => [p.id, p])),
@@ -180,6 +250,44 @@ export default function BankGrid() {
       {error && (
         <div className="mt-3 rounded-md border border-rose-600/50 bg-rose-950/40 p-3 text-sm text-rose-300">
           {error}
+        </div>
+      )}
+
+      {/* デフォルト配置の更新通知（管理者が更新したとき） */}
+      {showDefaultsBanner && (
+        <div className="mt-3 rounded-md border border-emerald-600/50 bg-emerald-950/40 p-3 text-sm">
+          <div className="font-medium text-emerald-200">
+            管理者がおすすめのデフォルト配置を更新しました（{defaultsMeta.slotCount} スロット）
+          </div>
+          <p className="mt-1 text-xs text-emerald-300/80">
+            あなたの<strong>空いているパッドだけ</strong>にデフォルトを取り込めます。
+            すでに配置済みのパッドは上書きされません。
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={handleImportDefaults}
+              disabled={importing}
+              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+            >
+              {importing ? '取り込み中…' : '空きスロットに取り込む'}
+            </button>
+            <button
+              type="button"
+              onClick={handleDismissDefaults}
+              disabled={importing}
+              className="rounded-md border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+            >
+              あとで（通知を閉じる）
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 取り込み結果メッセージ */}
+      {importMsg && (
+        <div className="mt-3 rounded-md border border-slate-700 bg-slate-900 p-2 text-xs text-slate-300">
+          {importMsg}
         </div>
       )}
 

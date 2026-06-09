@@ -12,6 +12,9 @@ import {
   updatePreset,
   deletePreset,
 } from '../lib/presets.js'
+import { useAuth } from '../contexts/AuthContext.jsx'
+import { subscribeSlots } from '../lib/slots.js'
+import { saveDefaultSlots, subscribeDefaultsMeta } from '../lib/defaultSlots.js'
 
 // 登録済み一覧のバンク切り替えタブ（プリセットは B1〜B14）
 const PRESET_BANK_MAX = 14
@@ -49,6 +52,7 @@ const EMPTY_FORM = {
 }
 
 export default function Admin() {
+  const { user } = useAuth()
   const [presets, setPresets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -56,6 +60,12 @@ export default function Admin() {
   const [editingId, setEditingId] = useState(null) // null=新規, それ以外=編集中
   const [busy, setBusy] = useState(false)
   const [selectedBank, setSelectedBank] = useState(1) // 一覧の表示バンク
+
+  // 自分（管理者）の現在のスロット配置。「デフォルトに保存」の元データに使う。
+  const [mySlots, setMySlots] = useState({})
+  const [savingDefault, setSavingDefault] = useState(false)
+  const [defaultMsg, setDefaultMsg] = useState('')
+  const [defaultsMeta, setDefaultsMeta] = useState(null) // 公開中のデフォルト { version, slotCount, updatedAt }
 
   // バンクごとの件数
   const counts = useMemo(() => {
@@ -93,6 +103,52 @@ export default function Admin() {
     )
     return unsub
   }, [])
+
+  // 管理者自身のスロット配置を購読（デフォルト保存の元データ）
+  useEffect(() => {
+    if (!user) return
+    const unsub = subscribeSlots(
+      user.uid,
+      setMySlots,
+      (e) => setError(`配置の読み込みに失敗しました：${e.message}`),
+    )
+    return unsub
+  }, [user])
+
+  // 公開中のデフォルト配置メタ（バージョン・更新日時）を購読
+  useEffect(() => {
+    const unsub = subscribeDefaultsMeta(setDefaultsMeta, () => {})
+    return unsub
+  }, [])
+
+  // 使用中（空きでない）スロット数
+  const usedSlotCount = useMemo(
+    () => Object.values(mySlots).filter((s) => s?.type && s.type !== 'empty').length,
+    [mySlots],
+  )
+
+  // 現在の配置を defaultSlots に保存（新規ユーザーの初期プリセットになる）
+  const handleSaveDefault = async () => {
+    if (
+      !window.confirm(
+        `現在のあなたの配置（使用中 ${usedSlotCount} スロット）を、新規ユーザーの初期配置（デフォルト）として保存します。\n既存のデフォルトは上書きされます。よろしいですか？`,
+      )
+    )
+      return
+    setDefaultMsg('')
+    setSavingDefault(true)
+    try {
+      const count = await saveDefaultSlots(mySlots)
+      setDefaultMsg(
+        `デフォルト配置を保存しました（${count} スロット）。` +
+          '各ユーザーは次回のバンク配置画面で取り込み通知を受け取ります。',
+      )
+    } catch (err) {
+      setError(`デフォルト配置の保存に失敗しました：${err.message}`)
+    } finally {
+      setSavingDefault(false)
+    }
+  }
 
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const updateCheck = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.checked }))
@@ -164,6 +220,46 @@ export default function Admin() {
       <p className="mt-1 text-sm text-slate-400">
         実機を鳴らしながら音色を採取して登録します。
       </p>
+
+      {/* デフォルト配置の保存：自分のバンク配置を新規ユーザーの初期プリセットにする */}
+      <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-medium text-slate-200">
+              新規ユーザーの初期配置（デフォルト）
+            </div>
+            <p className="mt-1 text-xs text-slate-400">
+              <Link to="/banks" className="text-emerald-400 hover:underline">
+                バンク配置
+              </Link>
+              で組んだあなたの現在の配置を保存すると、新規ユーザーの初回ログイン時に
+              コピーされ初期プリセットとして入ります。既存ユーザーには取り込み通知が届きます。
+              現在の使用中スロット：
+              <span className="font-semibold text-slate-200">{usedSlotCount}</span>
+            </p>
+            {defaultsMeta && (defaultsMeta.version ?? 0) > 0 && (
+              <p className="mt-1 text-xs text-slate-500">
+                公開中のデフォルト：v{defaultsMeta.version}（{defaultsMeta.slotCount} スロット）
+                {defaultsMeta.updatedAt?.toDate &&
+                  ` / 更新 ${defaultsMeta.updatedAt.toDate().toLocaleString('ja-JP')}`}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveDefault}
+            disabled={savingDefault || usedSlotCount === 0}
+            className="shrink-0 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+          >
+            {savingDefault ? '保存中…' : '現在の配置をデフォルトに保存'}
+          </button>
+        </div>
+        {defaultMsg && (
+          <div className="mt-3 rounded-md border border-emerald-700/50 bg-emerald-950/40 p-2 text-xs text-emerald-300">
+            {defaultMsg}
+          </div>
+        )}
+      </div>
 
       {error && (
         <div className="mt-3 rounded-md border border-rose-600/50 bg-rose-950/40 p-3 text-sm text-rose-300">
