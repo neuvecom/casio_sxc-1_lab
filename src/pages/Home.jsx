@@ -1,11 +1,8 @@
-// 公開トップ（ランディング）。CASIO SXC-1 の紹介＋実機写真＋Amazonリンク。
+// 公開トップ（ランディング）。CASIO SXC-1 の紹介＋実機写真。
 // 未ログインでも閲覧でき、上部メニューから新規登録/ログインへ誘導する。
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext.jsx";
-
-// TODO: ご自身の Amazon アソシエイトのリンクに差し替えてください（tag=◯◯-22 を含むURL）
-const AMAZON_URL = "https://amzn.to/4odymiC";
 
 const SPECS = [
   ["種別", "ポータブル・スタンドアロン・サンプラー"],
@@ -111,27 +108,6 @@ export default function Home() {
         <p className="mt-2 text-xs text-slate-500">
           ※仕様は公開情報に基づきます。公式が由来として挙げているのは SK-1 /
           MT-40 です。
-        </p>
-      </section>
-
-      {/* Amazon */}
-      <section className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-        <h2 className="text-lg font-bold">SXC-1 を手に入れる</h2>
-        <p className="mt-2 text-sm text-slate-300">
-          気になった方は、こちらからチェックできます。
-        </p>
-        <a
-          href={AMAZON_URL}
-          target="_blank"
-          rel="sponsored noopener noreferrer"
-          className="mt-4 inline-block rounded-md bg-amber-500 px-5 py-2.5 font-bold text-slate-900 hover:bg-amber-400"
-        >
-          Amazon で見る
-        </a>
-        <p className="mt-3 text-xs text-slate-500">
-          当サイトは Amazon
-          アソシエイト・プログラムの参加者です。リンク経由の購入により
-          収益を得る場合があります。
         </p>
       </section>
     </div>
